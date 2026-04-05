@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+build/
+.svelte-kit/
+.turbo/
+
+# Go
+apps/server/pasmello
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Env
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude
+.claude/
+CLAUDE.md
+
+# Server frontend embed (built)
+apps/server/frontend/
+
+# Binary
+pasmello
+
+# pnpm
+.pnpm-store/

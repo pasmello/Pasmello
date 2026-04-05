@@ -1,0 +1,36 @@
+@import '$lib/theme/tokens.css';
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-family: var(--pm-font-sans);
+    font-size: 16px;
+    color: var(--pm-text-primary);
+    background-color: var(--pm-bg-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    min-height: 100vh;
+}
+
+a {
+    color: var(--pm-accent);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--pm-accent-hover);
+}
+
+::selection {
+    background-color: var(--pm-accent-subtle);
+    color: var(--pm-text-primary);
+}

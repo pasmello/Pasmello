@@ -1,0 +1,16 @@
+{
+    "id": "clock",
+    "name": "Clock",
+    "version": "0.0.1",
+    "description": "A simple clock widget showing current time and date",
+    "entry": "index.html",
+    "permissions": {
+        "network": [],
+        "storage": "read-write",
+        "clipboard": "none",
+        "notifications": false,
+        "camera": false,
+        "geolocation": false
+    },
+    "actions": {}
+}

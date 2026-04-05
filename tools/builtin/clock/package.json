@@ -1,0 +1,17 @@
+{
+  "name": "@pasmello/tool-clock",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite"
+  },
+  "dependencies": {
+    "@pasmello/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^7.3.1",
+    "typescript": "^5.9.3"
+  }
+}
