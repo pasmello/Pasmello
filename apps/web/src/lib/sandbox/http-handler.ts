@@ -19,10 +19,9 @@ export function createHttpHandler(): RequestHandler {
         const res = await fetch(`${API_BASE}/proxy/${toolId}/${encodeURIComponent(url)}`, {
             method: method ?? 'GET',
             headers: {
-                'Content-Type': 'application/json',
                 ...headers,
             },
-            body: body ? JSON.stringify({ body }) : undefined,
+            body: body ?? undefined,
         });
 
         const responseBody = await res.text();

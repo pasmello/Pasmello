@@ -27,7 +27,7 @@
     <iframe
         bind:this={iframeEl}
         sandbox="allow-scripts"
-        src="/api/v1/tools/{toolId}/serve"
+        src="/api/v1/tools/{toolId}/serve/"
         title="Tool: {toolId}"
     ></iframe>
 </div>

@@ -1,7 +1,5 @@
-// Clock tool — demonstrates basic Pasmello SDK usage
-// import { initSDK } from '@pasmello/sdk';
+import { initSDK } from '@pasmello/sdk';
 
-// For now, run standalone without SDK (SDK connection is optional)
 const timeEl = document.getElementById('time')!;
 const dateEl = document.getElementById('date')!;
 const timezoneEl = document.getElementById('timezone')!;
@@ -28,9 +26,9 @@ function update() {
 update();
 setInterval(update, 1000);
 
-// SDK integration (when available)
-// initSDK().then((sdk) => {
-//     sdk.ui.getTheme().then((vars) => {
-//         console.log('Theme loaded:', Object.keys(vars).length, 'variables');
-//     });
-// });
+// SDK integration (graceful degradation — clock works standalone if SDK fails)
+initSDK().then((sdk) => {
+    console.log('[Clock] SDK connected');
+}).catch((err) => {
+    console.warn('[Clock] SDK not available, running standalone:', err);
+});

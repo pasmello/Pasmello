@@ -1,0 +1,34 @@
+import type { ThemeManifest } from '@pasmello/shared';
+
+export const manifest: ThemeManifest = {
+    id: 'monolithic',
+    name: 'Monolithic',
+    version: '1.0.0',
+    description: 'Black and white with foldable sidebar',
+    builtIn: true,
+    tokens: {
+        '--pm-bg-primary': '#ffffff',
+        '--pm-bg-secondary': '#f5f5f5',
+        '--pm-bg-tertiary': '#ebebeb',
+        '--pm-bg-surface': '#ffffff',
+        '--pm-accent': '#000000',
+        '--pm-accent-hover': '#333333',
+        '--pm-accent-subtle': 'rgba(0,0,0,0.06)',
+        '--pm-border': '#d0d0d0',
+        '--pm-border-subtle': '#e5e5e5',
+    },
+    darkTokens: {
+        '--pm-bg-primary': '#000000',
+        '--pm-bg-secondary': '#0a0a0a',
+        '--pm-bg-tertiary': '#141414',
+        '--pm-bg-surface': '#0a0a0a',
+        '--pm-accent': '#ffffff',
+        '--pm-accent-hover': '#cccccc',
+        '--pm-accent-subtle': 'rgba(255,255,255,0.08)',
+        '--pm-text-primary': '#ffffff',
+        '--pm-text-secondary': '#a0a0a0',
+        '--pm-text-tertiary': '#666666',
+        '--pm-border': '#2a2a2a',
+        '--pm-border-subtle': '#1a1a1a',
+    },
+};

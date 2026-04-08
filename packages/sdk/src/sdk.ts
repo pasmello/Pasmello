@@ -28,13 +28,21 @@ export class PasmelloSDK {
     async ready(): Promise<void> {
         await this.channel.ready();
 
-        // Request initial theme
-        const vars = await this.ui.getTheme();
-        // Apply theme variables
-        const root = document.documentElement;
-        for (const [key, value] of Object.entries(vars)) {
-            root.style.setProperty(key, value);
+        // Request and apply initial theme (non-fatal if it fails)
+        try {
+            const vars = await this.ui.getTheme();
+            const root = document.documentElement;
+            for (const [key, value] of Object.entries(vars)) {
+                root.style.setProperty(key, value);
+            }
+        } catch {
+            console.warn('[PasmelloSDK] Failed to load initial theme');
         }
+    }
+
+    /** Clean up the SDK and close the channel. */
+    destroy(): void {
+        this.channel.destroy();
     }
 }
 

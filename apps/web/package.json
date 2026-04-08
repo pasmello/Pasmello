@@ -22,6 +22,7 @@
 		"vite": "^7.3.1"
 	},
 	"dependencies": {
+		"@pasmello/shared": "workspace:*",
 		"svelte-grid-extended": "^1.2.1"
 	}
 }

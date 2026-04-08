@@ -1,31 +1,39 @@
 <script lang="ts">
-    import { theme } from '$lib/theme/theme.svelte';
+    import type { Snippet } from 'svelte';
+    import { themeSettings } from '$lib/theme/settings.svelte';
+    import { workspaceState } from '$lib/state/workspace.svelte';
 
-    let { children } = $props();
+    interface Props {
+        currentView: 'workspace' | 'tools' | 'settings';
+        children: Snippet;
+    }
+
+    let { currentView, children }: Props = $props();
 </script>
 
-<div class="shell" data-theme={theme.current}>
+<div class="shell">
     <aside class="sidebar">
         <div class="sidebar-header">
             <h1 class="logo">Pasmello</h1>
+            <p class="workspace-name">{workspaceState.currentName}</p>
         </div>
         <nav class="sidebar-nav">
-            <a href="/" class="nav-item active">
+            <a href="/" class="nav-item" class:active={currentView === 'workspace'}>
                 <span class="nav-icon">&#9633;</span>
                 <span>Workspace</span>
             </a>
-            <a href="/tools" class="nav-item">
-                <span class="nav-icon">&#9881;</span>
+            <a href="/tools" class="nav-item" class:active={currentView === 'tools'}>
+                <span class="nav-icon">&#128295;</span>
                 <span>Tools</span>
             </a>
-            <a href="/settings" class="nav-item">
+            <a href="/settings" class="nav-item" class:active={currentView === 'settings'}>
                 <span class="nav-icon">&#9881;</span>
                 <span>Settings</span>
             </a>
         </nav>
         <div class="sidebar-footer">
-            <button class="theme-toggle" onclick={() => theme.toggle()}>
-                {theme.current === 'dark' ? '☀️' : '🌙'}
+            <button class="theme-toggle" onclick={() => themeSettings.toggleColorScheme()}>
+                {themeSettings.colorScheme === 'dark' ? '☀️' : '🌙'}
             </button>
         </div>
     </aside>
@@ -42,7 +50,7 @@
     }
 
     .sidebar {
-        width: var(--pm-sidebar-width);
+        width: 240px;
         background-color: var(--pm-bg-secondary);
         border-right: 1px solid var(--pm-border-subtle);
         display: flex;
@@ -59,6 +67,12 @@
         font-size: var(--pm-font-size-lg);
         font-weight: 700;
         color: var(--pm-accent);
+    }
+
+    .workspace-name {
+        font-size: var(--pm-font-size-xs);
+        color: var(--pm-text-tertiary);
+        margin-top: var(--pm-space-xs);
     }
 
     .sidebar-nav {
@@ -78,6 +92,7 @@
         color: var(--pm-text-secondary);
         transition: all var(--pm-transition-fast);
         font-size: var(--pm-font-size-sm);
+        text-decoration: none;
     }
 
     .nav-item:hover {

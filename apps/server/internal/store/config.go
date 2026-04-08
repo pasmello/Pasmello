@@ -14,6 +14,7 @@ func InitDataDir(dataDir string) error {
 		filepath.Join(dataDir, "workspaces", "default", "data"),
 		filepath.Join(dataDir, "workspaces", "default", "workflows"),
 		filepath.Join(dataDir, "tools"),
+		filepath.Join(dataDir, "themes"),
 		filepath.Join(dataDir, "workflows"),
 		filepath.Join(dataDir, "logs", "workflow-runs"),
 	}

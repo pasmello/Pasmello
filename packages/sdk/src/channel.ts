@@ -8,11 +8,14 @@ export class Channel {
     private pendingRequests = new Map<string, {
         resolve: (value: unknown) => void;
         reject: (reason: unknown) => void;
+        timer: ReturnType<typeof setTimeout>;
     }>();
     private handlers = new Map<string, (data: unknown) => unknown>();
     private readyPromise: Promise<void>;
     private readyResolve!: () => void;
     private requestId = 0;
+    private destroyed = false;
+    private static REQUEST_TIMEOUT = 30_000;
 
     constructor() {
         this.readyPromise = new Promise((resolve) => {
@@ -36,11 +39,17 @@ export class Channel {
 
     /** Send a request to the host and wait for a response. */
     async request(type: string, data?: unknown): Promise<unknown> {
+        if (this.destroyed) throw new Error('Channel is destroyed');
         await this.ready();
         const id = String(++this.requestId);
 
         return new Promise((resolve, reject) => {
-            this.pendingRequests.set(id, { resolve, reject });
+            const timer = setTimeout(() => {
+                this.pendingRequests.delete(id);
+                reject(new Error(`Request timed out: ${type}`));
+            }, Channel.REQUEST_TIMEOUT);
+
+            this.pendingRequests.set(id, { resolve, reject, timer });
             this.port!.postMessage({ id, type, data });
         });
     }
@@ -52,8 +61,22 @@ export class Channel {
 
     /** Send a fire-and-forget message to the host. */
     async send(type: string, data?: unknown): Promise<void> {
+        if (this.destroyed) return;
         await this.ready();
         this.port!.postMessage({ type, data });
+    }
+
+    /** Close the port and reject all pending requests. */
+    destroy(): void {
+        this.destroyed = true;
+        for (const [id, pending] of this.pendingRequests) {
+            clearTimeout(pending.timer);
+            pending.reject(new Error('Channel destroyed'));
+        }
+        this.pendingRequests.clear();
+        this.handlers.clear();
+        this.port?.close();
+        this.port = null;
     }
 
     private handleMessage(event: MessageEvent) {
@@ -62,6 +85,7 @@ export class Channel {
         // Response to a pending request
         if (id && this.pendingRequests.has(id)) {
             const pending = this.pendingRequests.get(id)!;
+            clearTimeout(pending.timer);
             this.pendingRequests.delete(id);
             if (error) {
                 pending.reject(new Error(error));

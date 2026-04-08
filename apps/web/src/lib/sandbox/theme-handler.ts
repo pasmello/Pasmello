@@ -28,6 +28,15 @@ export function createThemeHandler(): RequestHandler {
             }
         }
 
+        // Also capture inline style overrides (from applyThemeTokens)
+        const rootStyle = root.style;
+        for (let i = 0; i < rootStyle.length; i++) {
+            const prop = rootStyle[i];
+            if (prop.startsWith('--pm-')) {
+                vars[prop] = rootStyle.getPropertyValue(prop).trim();
+            }
+        }
+
         return vars;
     };
 }
