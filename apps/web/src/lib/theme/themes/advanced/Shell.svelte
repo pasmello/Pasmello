@@ -4,7 +4,7 @@
     import { workspaceState } from '$lib/state/workspace.svelte';
 
     interface Props {
-        currentView: 'workspace' | 'tools' | 'settings';
+        currentView: 'workspace' | 'tools' | 'workflows' | 'settings';
         children: Snippet;
     }
 
@@ -25,6 +25,10 @@
             <a href="/tools" class="nav-item" class:active={currentView === 'tools'}>
                 <span class="nav-icon">&#128295;</span>
                 <span>Tools</span>
+            </a>
+            <a href="/workflows" class="nav-item" class:active={currentView === 'workflows'}>
+                <span class="nav-icon">&#8644;</span>
+                <span>Workflows</span>
             </a>
             <a href="/settings" class="nav-item" class:active={currentView === 'settings'}>
                 <span class="nav-icon">&#9881;</span>

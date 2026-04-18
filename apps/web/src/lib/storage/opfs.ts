@@ -1,4 +1,10 @@
-import type { Workspace, ToolManifest, ThemeSettings } from '@pasmello/shared';
+import type {
+    Workspace,
+    ToolManifest,
+    ThemeSettings,
+    Workflow,
+    WorkflowRunResult,
+} from '@pasmello/shared';
 import { assertPathSegment, type Storage, type ToolFile } from './types.js';
 
 const DEFAULT_WORKSPACE: Workspace = {
@@ -170,6 +176,77 @@ export class OpfsStorage implements Storage {
 
     async saveThemeSettings(settings: ThemeSettings): Promise<void> {
         await this.writeJson(['settings.json'], settings);
+    }
+
+    async listWorkflows(workspace: string): Promise<Workflow[]> {
+        assertPathSegment(workspace);
+        const dir = await this.getDir(['workspaces', workspace, 'workflows'], false);
+        if (!dir) return [];
+        const out: Workflow[] = [];
+        for await (const [name, handle] of entries(dir)) {
+            if (handle.kind !== 'file' || !name.endsWith('.json')) continue;
+            const wf = await this.readJson<Workflow>([
+                'workspaces', workspace, 'workflows', name,
+            ]);
+            if (wf) out.push(wf);
+        }
+        return out;
+    }
+
+    async getWorkflow(workspace: string, id: string): Promise<Workflow | null> {
+        assertPathSegment(workspace);
+        assertPathSegment(id);
+        return this.readJson<Workflow>(['workspaces', workspace, 'workflows', `${id}.json`]);
+    }
+
+    async saveWorkflow(workspace: string, wf: Workflow): Promise<void> {
+        assertPathSegment(workspace);
+        assertPathSegment(wf.id);
+        await this.getDir(['workspaces', workspace, 'workflows'], true);
+        await this.writeJson(['workspaces', workspace, 'workflows', `${wf.id}.json`], wf);
+    }
+
+    async deleteWorkflow(workspace: string, id: string): Promise<void> {
+        assertPathSegment(workspace);
+        assertPathSegment(id);
+        const dir = await this.getDir(['workspaces', workspace, 'workflows'], false);
+        if (!dir) return;
+        await dir.removeEntry(`${id}.json`).catch(() => {});
+    }
+
+    async appendRunLog(workspace: string, run: WorkflowRunResult): Promise<void> {
+        assertPathSegment(workspace);
+        assertPathSegment(run.workflowId);
+        assertPathSegment(run.runId);
+        await this.getDir(['logs', 'workflow-runs', workspace, run.workflowId], true);
+        await this.writeJson(
+            ['logs', 'workflow-runs', workspace, run.workflowId, `${run.runId}.json`],
+            run,
+        );
+    }
+
+    async listRunLogs(
+        workspace: string,
+        workflowId: string,
+        limit?: number,
+    ): Promise<WorkflowRunResult[]> {
+        assertPathSegment(workspace);
+        assertPathSegment(workflowId);
+        const dir = await this.getDir(
+            ['logs', 'workflow-runs', workspace, workflowId],
+            false,
+        );
+        if (!dir) return [];
+        const runs: WorkflowRunResult[] = [];
+        for await (const [name, handle] of entries(dir)) {
+            if (handle.kind !== 'file' || !name.endsWith('.json')) continue;
+            const run = await this.readJson<WorkflowRunResult>([
+                'logs', 'workflow-runs', workspace, workflowId, name,
+            ]);
+            if (run) runs.push(run);
+        }
+        runs.sort((a, b) => b.startedAt - a.startedAt);
+        return typeof limit === 'number' ? runs.slice(0, limit) : runs;
     }
 
     async exportAll(): Promise<Map<string, Uint8Array>> {

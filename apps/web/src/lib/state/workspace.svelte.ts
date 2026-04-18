@@ -1,4 +1,5 @@
 import { api } from '$lib/api/client';
+import { eventBus, triggerDispatcher } from '$lib/workflow/triggers';
 import type { Workspace } from '@pasmello/shared';
 
 class WorkspaceState {
@@ -64,6 +65,8 @@ class WorkspaceState {
 
     async switchWorkspace(name: string) {
         await this.loadWorkspace(name);
+        await triggerDispatcher.init(name);
+        eventBus.emit('workspace:switched');
     }
 }
 

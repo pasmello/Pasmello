@@ -9,12 +9,14 @@
     import { themeRegistry } from '$lib/theme/registry.svelte';
     import { applyThemeTokens } from '$lib/theme/apply-tokens';
     import { bootstrapApp } from '$lib/bootstrap';
+    import { triggerDispatcher } from '$lib/workflow/triggers';
 
     let { children } = $props();
 
     let currentView = $derived(
         $page.url.pathname === '/' ? 'workspace' as const :
         $page.url.pathname.startsWith('/tools') ? 'tools' as const :
+        $page.url.pathname.startsWith('/workflows') ? 'workflows' as const :
         $page.url.pathname.startsWith('/settings') ? 'settings' as const :
         'workspace' as const
     );
@@ -60,6 +62,7 @@
     onMount(async () => {
         await bootstrapApp();
         bridgeManager.init(workspaceState.currentName);
+        await triggerDispatcher.init(workspaceState.currentName);
         bootstrapped = true;
     });
 

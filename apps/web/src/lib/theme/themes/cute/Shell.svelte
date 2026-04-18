@@ -3,7 +3,7 @@
     import { themeSettings } from '$lib/theme/settings.svelte';
 
     interface Props {
-        currentView: 'workspace' | 'tools' | 'settings';
+        currentView: 'workspace' | 'tools' | 'workflows' | 'settings';
         children: Snippet;
     }
 
@@ -63,6 +63,10 @@
         <a href="/tools" class="bar-item" class:active={currentView === 'tools'}>
             <span class="bar-icon">&#128295;</span>
             <span class="bar-label">Tools</span>
+        </a>
+        <a href="/workflows" class="bar-item" class:active={currentView === 'workflows'}>
+            <span class="bar-icon">&#8644;</span>
+            <span class="bar-label">Workflows</span>
         </a>
         <a href="/settings" class="bar-item" class:active={currentView === 'settings'}>
             <span class="bar-icon">&#9881;</span>

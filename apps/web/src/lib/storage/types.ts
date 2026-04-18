@@ -1,4 +1,10 @@
-import type { Workspace, ToolManifest, ThemeSettings } from '@pasmello/shared';
+import type {
+    Workspace,
+    ToolManifest,
+    ThemeSettings,
+    Workflow,
+    WorkflowRunResult,
+} from '@pasmello/shared';
 
 /**
  * Storage abstraction. The OSS tier uses OpfsStorage; future tiers
@@ -25,6 +31,14 @@ export interface Storage {
 
     getThemeSettings(): Promise<ThemeSettings>;
     saveThemeSettings(settings: ThemeSettings): Promise<void>;
+
+    listWorkflows(workspace: string): Promise<Workflow[]>;
+    getWorkflow(workspace: string, id: string): Promise<Workflow | null>;
+    saveWorkflow(workspace: string, wf: Workflow): Promise<void>;
+    deleteWorkflow(workspace: string, id: string): Promise<void>;
+
+    appendRunLog(workspace: string, run: WorkflowRunResult): Promise<void>;
+    listRunLogs(workspace: string, workflowId: string, limit?: number): Promise<WorkflowRunResult[]>;
 
     /** Snapshot every byte under storage as a flat path -> bytes map. */
     exportAll(): Promise<Map<string, Uint8Array>>;
