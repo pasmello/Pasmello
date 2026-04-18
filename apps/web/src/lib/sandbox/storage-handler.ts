@@ -1,42 +1,29 @@
 import type { RequestHandler } from './host-bridge.js';
-
-const API_BASE = '/api/v1';
+import { storage } from '$lib/storage';
 
 /**
- * Creates handlers for tool storage requests.
- * Routes storage operations to the Go backend which persists to ~/.pasmello/
+ * Storage handlers route tool-side requests directly to OPFS via the
+ * shared Storage adapter — no HTTP, no server.
  */
 export function createStorageHandlers(workspace: string): Record<string, RequestHandler> {
     return {
         'storage:get': async (toolId, data) => {
             const { key } = data as { key: string };
-            const res = await fetch(`${API_BASE}/workspaces/${workspace}/tools/${toolId}/data/${encodeURIComponent(key)}`);
-            if (!res.ok) return null;
-            const json = await res.json();
-            return json.value ?? null;
+            return storage.getToolData(workspace, toolId, key);
         },
 
         'storage:set': async (toolId, data) => {
             const { key, value } = data as { key: string; value: string };
-            await fetch(`${API_BASE}/workspaces/${workspace}/tools/${toolId}/data/${encodeURIComponent(key)}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ value }),
-            });
+            await storage.setToolData(workspace, toolId, key, value);
         },
 
         'storage:delete': async (toolId, data) => {
             const { key } = data as { key: string };
-            await fetch(`${API_BASE}/workspaces/${workspace}/tools/${toolId}/data/${encodeURIComponent(key)}`, {
-                method: 'DELETE',
-            });
+            await storage.deleteToolData(workspace, toolId, key);
         },
 
         'storage:keys': async (toolId) => {
-            const res = await fetch(`${API_BASE}/workspaces/${workspace}/tools/${toolId}/data`);
-            if (!res.ok) return [];
-            const json = await res.json();
-            return json.keys ?? [];
+            return storage.listToolDataKeys(workspace, toolId);
         },
     };
 }

@@ -4,10 +4,14 @@
     import { themeRegistry } from '$lib/theme/registry.svelte';
     import { workspaceState } from '$lib/state/workspace.svelte';
     import { bridgeManager } from '$lib/sandbox/bridge.svelte';
+    import { downloadStorageZip, importStorageZip } from '$lib/storage/portable';
     import ThemeSettingsRenderer from './ThemeSettingsRenderer.svelte';
 
     let newWorkspaceName = $state('');
     let createError = $state<string | null>(null);
+    let backupBusy = $state(false);
+    let backupMessage = $state<string | null>(null);
+    let importInput: HTMLInputElement;
 
     onMount(async () => {
         await workspaceState.loadWorkspaces();
@@ -27,6 +31,34 @@
     async function switchTo(name: string) {
         await workspaceState.switchWorkspace(name);
         bridgeManager.init(name);
+    }
+
+    async function handleExport() {
+        backupBusy = true;
+        backupMessage = null;
+        try {
+            await downloadStorageZip();
+            backupMessage = 'Export downloaded.';
+        } catch (err) {
+            backupMessage = `Export failed: ${err instanceof Error ? err.message : String(err)}`;
+        } finally {
+            backupBusy = false;
+        }
+    }
+
+    async function handleImport(file: File | null) {
+        if (!file) return;
+        if (!confirm('Import will overwrite matching files in storage. Continue?')) return;
+        backupBusy = true;
+        backupMessage = null;
+        try {
+            await importStorageZip(file);
+            backupMessage = 'Import complete. Reload the page to see changes.';
+        } catch (err) {
+            backupMessage = `Import failed: ${err instanceof Error ? err.message : String(err)}`;
+        } finally {
+            backupBusy = false;
+        }
     }
 
     let activeManifest = $derived(themeRegistry.activeManifest);
@@ -123,6 +155,37 @@
             </form>
             {#if createError}
                 <p class="create-error">{createError}</p>
+            {/if}
+        </section>
+
+        <!-- Backup -->
+        <section class="setting-group">
+            <h3>Backup</h3>
+            <p class="backup-hint">
+                Storage lives inside the browser (OPFS). Export to keep a portable zip backup;
+                import to restore on another browser or device.
+            </p>
+            <div class="backup-actions">
+                <button class="setting-control" disabled={backupBusy} onclick={handleExport}>
+                    Export storage as zip
+                </button>
+                <button
+                    class="setting-control"
+                    disabled={backupBusy}
+                    onclick={() => importInput.click()}
+                >
+                    Import zip
+                </button>
+                <input
+                    bind:this={importInput}
+                    type="file"
+                    accept=".zip,application/zip"
+                    hidden
+                    onchange={(e) => handleImport(((e.currentTarget as HTMLInputElement).files ?? [null])[0])}
+                />
+            </div>
+            {#if backupMessage}
+                <p class="backup-message">{backupMessage}</p>
             {/if}
         </section>
     </div>
@@ -367,5 +430,23 @@
         margin-top: var(--pm-space-xs);
         font-size: var(--pm-font-size-xs);
         color: var(--pm-status-error);
+    }
+
+    .backup-hint {
+        font-size: var(--pm-font-size-xs);
+        color: var(--pm-text-tertiary);
+        margin-bottom: var(--pm-space-sm);
+    }
+
+    .backup-actions {
+        display: flex;
+        gap: var(--pm-space-sm);
+        flex-wrap: wrap;
+    }
+
+    .backup-message {
+        margin-top: var(--pm-space-sm);
+        font-size: var(--pm-font-size-xs);
+        color: var(--pm-text-secondary);
     }
 </style>

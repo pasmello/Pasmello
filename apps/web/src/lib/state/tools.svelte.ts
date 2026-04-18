@@ -19,16 +19,6 @@ class ToolsState {
         }
     }
 
-    async installTool(path: string) {
-        this.error = null;
-        try {
-            await api.tools.install(path);
-            await this.loadTools();
-        } catch (e) {
-            this.error = e instanceof Error ? e.message : String(e);
-        }
-    }
-
     async removeTool(id: string) {
         this.error = null;
         try {

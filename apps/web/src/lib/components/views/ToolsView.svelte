@@ -2,9 +2,14 @@
     import { onMount } from 'svelte';
     import { toolsState } from '$lib/state/tools.svelte';
     import { workspaceState } from '$lib/state/workspace.svelte';
+    import { installFromZip, installFromUrl, ToolInstallError } from '$lib/tools/install';
     import type { ToolManifest } from '@pasmello/shared';
 
-    let installPath = $state('');
+    let installUrl = $state('');
+    let installing = $state(false);
+    let installError = $state<string | null>(null);
+    let dragActive = $state(false);
+    let fileInput: HTMLInputElement;
 
     onMount(async () => {
         await toolsState.loadTools();
@@ -42,10 +47,48 @@
         await workspaceState.updateWorkspace(ws);
     }
 
-    async function handleInstall() {
-        if (!installPath.trim()) return;
-        await toolsState.installTool(installPath.trim());
-        installPath = '';
+    async function runInstall(action: () => Promise<ToolManifest>) {
+        installing = true;
+        installError = null;
+        try {
+            await action();
+            await toolsState.loadTools();
+        } catch (err) {
+            installError = err instanceof ToolInstallError || err instanceof Error
+                ? err.message
+                : String(err);
+        } finally {
+            installing = false;
+        }
+    }
+
+    async function handleFiles(fileList: FileList | null) {
+        if (!fileList || fileList.length === 0) return;
+        for (const file of Array.from(fileList)) {
+            await runInstall(() => installFromZip(file));
+        }
+    }
+
+    async function handleUrl() {
+        const url = installUrl.trim();
+        if (!url) return;
+        await runInstall(() => installFromUrl(url));
+        if (!installError) installUrl = '';
+    }
+
+    function onDrop(e: DragEvent) {
+        e.preventDefault();
+        dragActive = false;
+        handleFiles(e.dataTransfer?.files ?? null);
+    }
+
+    function onDragOver(e: DragEvent) {
+        e.preventDefault();
+        dragActive = true;
+    }
+
+    function onDragLeave() {
+        dragActive = false;
     }
 
     let hasTools = $derived(toolsState.installed.length > 0);
@@ -63,17 +106,48 @@
         </div>
     {/if}
 
-    <div class="install-section">
+    <div
+        class="install-section"
+        class:drag-active={dragActive}
+        ondrop={onDrop}
+        ondragover={onDragOver}
+        ondragleave={onDragLeave}
+        role="region"
+        aria-label="Install tool"
+    >
         <h3>Install Tool</h3>
-        <form class="install-form" onsubmit={(e) => { e.preventDefault(); handleInstall(); }}>
+        <div class="install-row">
+            <button
+                type="button"
+                class="install-btn"
+                onclick={() => fileInput.click()}
+                disabled={installing}
+            >Upload zip</button>
             <input
-                type="text"
-                bind:value={installPath}
-                placeholder="Absolute path to tool directory..."
-                class="install-input"
+                bind:this={fileInput}
+                type="file"
+                accept=".zip,application/zip"
+                multiple
+                hidden
+                onchange={(e) => handleFiles((e.currentTarget as HTMLInputElement).files)}
             />
-            <button type="submit" class="install-btn" disabled={!installPath.trim()}>Install</button>
+            <span class="install-or">or drop a zip here, or paste a URL</span>
+        </div>
+        <form class="install-row" onsubmit={(e) => { e.preventDefault(); handleUrl(); }}>
+            <input
+                type="url"
+                bind:value={installUrl}
+                placeholder="https://example.com/my-tool.zip"
+                class="install-input"
+                disabled={installing}
+            />
+            <button type="submit" class="install-btn" disabled={installing || !installUrl.trim()}>
+                Install from URL
+            </button>
         </form>
+        {#if installError}
+            <p class="install-error">{installError}</p>
+        {/if}
     </div>
 
     {#if toolsState.loading}
@@ -140,9 +214,21 @@
         color: var(--pm-text-secondary);
     }
 
-    .install-form {
+    .install-section.drag-active {
+        border-color: var(--pm-accent);
+        background-color: var(--pm-bg-tertiary);
+    }
+
+    .install-row {
         display: flex;
+        align-items: center;
         gap: var(--pm-space-sm);
+        margin-top: var(--pm-space-sm);
+    }
+
+    .install-or {
+        font-size: var(--pm-font-size-xs);
+        color: var(--pm-text-tertiary);
     }
 
     .install-input {
@@ -154,10 +240,6 @@
         font-family: var(--pm-font-mono);
         background-color: var(--pm-bg-primary);
         color: var(--pm-text-primary);
-    }
-
-    .install-input::placeholder {
-        color: var(--pm-text-tertiary);
     }
 
     .install-btn {
@@ -173,6 +255,12 @@
     .install-btn:disabled {
         opacity: 0.5;
         cursor: not-allowed;
+    }
+
+    .install-error {
+        margin-top: var(--pm-space-sm);
+        color: var(--pm-status-error);
+        font-size: var(--pm-font-size-sm);
     }
 
     .error-banner {

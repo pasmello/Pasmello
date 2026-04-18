@@ -8,6 +8,7 @@
     import { themeSettings } from '$lib/theme/settings.svelte';
     import { themeRegistry } from '$lib/theme/registry.svelte';
     import { applyThemeTokens } from '$lib/theme/apply-tokens';
+    import { bootstrapApp } from '$lib/bootstrap';
 
     let { children } = $props();
 
@@ -54,8 +55,12 @@
         }
     });
 
-    onMount(() => {
+    let bootstrapped = $state(false);
+
+    onMount(async () => {
+        await bootstrapApp();
         bridgeManager.init(workspaceState.currentName);
+        bootstrapped = true;
     });
 
     // Apply CSS tokens immediately when theme or color scheme changes
@@ -83,11 +88,15 @@
     <div class="theme-transition-overlay"></div>
 {/if}
 
-{#key renderedThemeId}
-    <ThemeShell {currentView}>
-        {@render children()}
-    </ThemeShell>
-{/key}
+{#if bootstrapped}
+    {#key renderedThemeId}
+        <ThemeShell {currentView}>
+            {@render children()}
+        </ThemeShell>
+    {/key}
+{:else}
+    <div class="boot-loading">Loading…</div>
+{/if}
 
 <style>
     .theme-transition-overlay {
@@ -102,5 +111,16 @@
     @keyframes theme-fade {
         0% { opacity: 1; }
         100% { opacity: 0; }
+    }
+
+    .boot-loading {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: var(--pm-font-size-sm);
+        color: var(--pm-text-tertiary);
+        background-color: var(--pm-bg-primary);
     }
 </style>

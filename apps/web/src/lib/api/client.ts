@@ -1,53 +1,88 @@
-const BASE = '/api/v1';
+import type { Workspace, ToolManifest, ThemeSettings } from '@pasmello/shared';
+import { storage, assertPathSegment, type ToolFile } from '$lib/storage';
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
-    const res = await fetch(`${BASE}${path}`, {
-        headers: { 'Content-Type': 'application/json' },
-        ...options,
-    });
-    if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: res.statusText }));
-        throw new Error(err.error ?? `HTTP ${res.status}`);
-    }
-    if (res.status === 204) return undefined as T;
-    return res.json();
+let initPromise: Promise<void> | null = null;
+function ensureInit(): Promise<void> {
+    if (!initPromise) initPromise = storage.init();
+    return initPromise;
 }
 
-import type { Workspace, ToolManifest, ThemeSettings } from '@pasmello/shared';
+async function nonNull<T>(v: T | null, msg: string): Promise<T> {
+    if (v === null) throw new Error(msg);
+    return v;
+}
 
 export const api = {
     workspaces: {
-        list: () => request<{ workspaces: string[] }>('/workspaces'),
-        get: (name: string) => request<Workspace>(`/workspaces/${name}`),
-        create: (name: string) => request<Workspace>('/workspaces', {
-            method: 'POST',
-            body: JSON.stringify({ name }),
-        }),
-        update: (name: string, data: Workspace) => request<Workspace>(`/workspaces/${name}`, {
-            method: 'PUT',
-            body: JSON.stringify(data),
-        }),
-        delete: (name: string) => request<void>(`/workspaces/${name}`, {
-            method: 'DELETE',
-        }),
+        async list(): Promise<{ workspaces: string[] }> {
+            await ensureInit();
+            return { workspaces: await storage.listWorkspaces() };
+        },
+        async get(name: string): Promise<Workspace> {
+            await ensureInit();
+            assertPathSegment(name);
+            return nonNull(await storage.getWorkspace(name), 'workspace not found');
+        },
+        async create(name: string): Promise<Workspace> {
+            await ensureInit();
+            assertPathSegment(name);
+            if (await storage.getWorkspace(name)) {
+                throw new Error('workspace already exists');
+            }
+            const ws: Workspace = {
+                name,
+                tools: [],
+                layout: { columns: 12, items: [] },
+            };
+            await storage.saveWorkspace(ws);
+            return ws;
+        },
+        async update(name: string, data: Workspace): Promise<Workspace> {
+            await ensureInit();
+            assertPathSegment(name);
+            const ws: Workspace = { ...data, name };
+            await storage.saveWorkspace(ws);
+            return ws;
+        },
+        async delete(name: string): Promise<void> {
+            await ensureInit();
+            assertPathSegment(name);
+            if (name === 'default') throw new Error('cannot delete default workspace');
+            await storage.deleteWorkspace(name);
+        },
     },
     tools: {
-        list: () => request<{ tools: ToolManifest[] }>('/tools'),
-        get: (id: string) => request<ToolManifest>(`/tools/${id}`),
-        install: (path: string) => request<{ status: string }>('/tools/install', {
-            method: 'POST',
-            body: JSON.stringify({ path }),
-        }),
-        remove: (id: string) => request<void>(`/tools/${id}`, {
-            method: 'DELETE',
-        }),
+        async list(): Promise<{ tools: ToolManifest[] }> {
+            await ensureInit();
+            return { tools: await storage.listTools() };
+        },
+        async get(id: string): Promise<ToolManifest> {
+            await ensureInit();
+            return nonNull(await storage.getToolManifest(id), 'tool not found');
+        },
+        async install(id: string, files: ToolFile[]): Promise<{ status: string }> {
+            await ensureInit();
+            await storage.installTool(id, files);
+            return { status: 'installed' };
+        },
+        async remove(id: string): Promise<void> {
+            await ensureInit();
+            await storage.removeTool(id);
+        },
     },
     settings: {
-        get: () => request<{ port: number; dataDir: string; devMode: boolean }>('/settings'),
-        getTheme: () => request<ThemeSettings>('/settings/theme'),
-        updateTheme: (data: ThemeSettings) => request<ThemeSettings>('/settings/theme', {
-            method: 'PUT',
-            body: JSON.stringify(data),
-        }),
+        async getTheme(): Promise<ThemeSettings> {
+            await ensureInit();
+            return storage.getThemeSettings();
+        },
+        async updateTheme(data: ThemeSettings): Promise<ThemeSettings> {
+            await ensureInit();
+            if (!data.activeTheme) throw new Error('activeTheme is required');
+            if (data.colorScheme !== 'light' && data.colorScheme !== 'dark') {
+                throw new Error("colorScheme must be 'light' or 'dark'");
+            }
+            await storage.saveThemeSettings(data);
+            return data;
+        },
     },
 };
