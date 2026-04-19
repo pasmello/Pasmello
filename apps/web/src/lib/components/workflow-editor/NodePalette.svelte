@@ -52,6 +52,21 @@
         -webkit-box-orient: vertical;
     }
 
+    @media (max-width: 1280px) {
+        .palette {
+            width: 100%;
+            flex-direction: row;
+            flex-wrap: wrap;
+        }
+        h4, .hint {
+            width: 100%;
+        }
+        .tile {
+            flex: 1 1 180px;
+            min-width: 160px;
+        }
+    }
+
     h4 {
         font-size: var(--pm-font-size-sm);
         font-weight: 600;

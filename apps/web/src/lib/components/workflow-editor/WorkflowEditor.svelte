@@ -208,4 +208,21 @@
     .json-layout {
         flex: 1;
     }
+
+    @media (max-width: 1280px) {
+        .layout {
+            flex-direction: column;
+        }
+        .center {
+            min-height: 500px;
+        }
+        .right {
+            width: 100%;
+            flex-direction: row;
+            flex-wrap: wrap;
+        }
+        .right > :global(*) {
+            flex: 1 1 280px;
+        }
+    }
 </style>
