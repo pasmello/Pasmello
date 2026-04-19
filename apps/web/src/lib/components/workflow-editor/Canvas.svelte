@@ -100,10 +100,18 @@
         <Background />
         <Controls />
     </SvelteFlow>
+
+    {#if editor.workflow.nodes.length === 0}
+        <div class="empty-hint">
+            <p class="title">Empty workflow</p>
+            <p class="sub">Drag a node from the palette onto this canvas to get started.</p>
+        </div>
+    {/if}
 </div>
 
 <style>
     .canvas-wrap {
+        position: relative;
         height: 100%;
         width: 100%;
         min-height: 500px;
@@ -111,5 +119,28 @@
         border: 1px solid var(--pm-border);
         border-radius: var(--pm-radius-sm);
         overflow: hidden;
+        box-shadow: inset 0 0 0 1px var(--pm-border-subtle);
+    }
+
+    .empty-hint {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: var(--pm-space-xs);
+        pointer-events: none;
+        color: var(--pm-text-tertiary);
+        font-size: var(--pm-font-size-sm);
+    }
+
+    .empty-hint .title {
+        font-weight: 600;
+        color: var(--pm-text-secondary);
+    }
+
+    .empty-hint .sub {
+        font-size: var(--pm-font-size-xs);
     }
 </style>

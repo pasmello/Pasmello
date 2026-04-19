@@ -40,7 +40,16 @@
         background-color: var(--pm-bg-secondary);
         border: 1px solid var(--pm-border-subtle);
         border-radius: var(--pm-radius-sm);
-        min-width: 200px;
+        width: 200px;
+        flex-shrink: 0;
+    }
+
+    .tile-desc {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
     }
 
     h4 {
