@@ -7,5 +7,10 @@ export const codeBlock: NodeHandler = async (config, runtime) => {
         throw new Error('code-block: missing code');
     }
     const inputs = Object.fromEntries(runtime.outputs);
-    return evalInWorker(code, inputs, typeof timeoutMs === 'number' ? timeoutMs : undefined);
+    return evalInWorker(
+        code,
+        inputs,
+        typeof timeoutMs === 'number' ? timeoutMs : undefined,
+        runtime.signal,
+    );
 };

@@ -12,6 +12,8 @@ export type {
     NodeRunResult,
     NodeRunStatus,
     WorkflowRunResult,
+    NodePosition,
+    EventFilter,
 } from './workflow.js';
 export type { ApiResponse, ApiError } from './api.js';
 export type { ThemeManifest, ThemeSettingDef, ThemeSettings } from './theme.js';

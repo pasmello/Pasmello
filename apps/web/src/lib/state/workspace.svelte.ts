@@ -36,6 +36,7 @@ class WorkspaceState {
         try {
             await api.workspaces.create(name);
             await this.loadWorkspaces();
+            eventBus.emit('workspace:created', { name });
         } catch (e) {
             this.error = e instanceof Error ? e.message : String(e);
         }
@@ -46,6 +47,7 @@ class WorkspaceState {
         try {
             await api.workspaces.delete(name);
             await this.loadWorkspaces();
+            eventBus.emit('workspace:deleted', { name });
             if (this.currentName === name) {
                 await this.loadWorkspace('default');
             }
@@ -66,7 +68,7 @@ class WorkspaceState {
     async switchWorkspace(name: string) {
         await this.loadWorkspace(name);
         await triggerDispatcher.init(name);
-        eventBus.emit('workspace:switched');
+        eventBus.emit('workspace:switched', { name });
     }
 }
 

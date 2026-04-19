@@ -12,6 +12,7 @@ export interface NodeRuntime {
     workspace: string;
     outputs: Map<string, unknown>;
     bridge: HostBridge | null;
+    signal: AbortSignal;
 }
 
 export type NodeHandler = (

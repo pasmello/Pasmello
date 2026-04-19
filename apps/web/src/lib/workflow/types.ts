@@ -1,6 +1,6 @@
 import type { Workflow, WorkflowTrigger, WorkflowRunResult } from '@pasmello/shared';
 
-export type NodeProgressStatus = 'started' | 'success' | 'error' | 'skipped';
+export type NodeProgressStatus = 'pending' | 'running' | 'success' | 'error' | 'skipped';
 
 export interface WorkflowExecutionContext {
     workspace: string;
@@ -9,6 +9,12 @@ export interface WorkflowExecutionContext {
     input?: unknown;
     /** Optional per-node progress callback (UI hook). */
     onNodeProgress?: (nodeId: string, status: NodeProgressStatus) => void;
+    /** Abort handle. Executor creates one if omitted; callers can supply their
+     *  own to cancel a run from the UI. */
+    controller?: AbortController;
+    /** How many trigger hops brought us here. Guards against chain-firing
+     *  cycles between workflows. */
+    triggerDepth?: number;
 }
 
 /**

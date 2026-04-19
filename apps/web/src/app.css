@@ -1,4 +1,6 @@
 @import '$lib/theme/tokens.css';
+@import '@xyflow/svelte/dist/style.css';
+@import '$lib/components/workflow-editor/svelte-flow-theme.css';
 
 *,
 *::before,

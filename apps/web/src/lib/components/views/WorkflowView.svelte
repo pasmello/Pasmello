@@ -2,30 +2,22 @@
     import { onMount } from 'svelte';
     import { storage } from '$lib/storage';
     import { workspaceState } from '$lib/state/workspace.svelte';
-    import { executor } from '$lib/workflow/executor';
     import { triggerDispatcher } from '$lib/workflow/triggers';
     import type { Workflow, WorkflowRunResult } from '@pasmello/shared';
+    import WorkflowEditor from '$lib/components/workflow-editor/WorkflowEditor.svelte';
 
     const NEW_WORKFLOW_TEMPLATE = (id: string): Workflow => ({
         id,
         name: id,
         description: '',
         triggers: [{ type: 'manual' }],
-        nodes: [
-            {
-                id: 'fetch',
-                type: 'http-request',
-                config: { url: 'https://api.github.com' },
-            },
-        ],
+        nodes: [],
         edges: [],
     });
 
     let workflows = $state<Workflow[]>([]);
     let selectedId = $state<string | null>(null);
-    let editorText = $state('');
-    let message = $state<string | null>(null);
-    let running = $state(false);
+    let selectedWorkflow = $state<Workflow | null>(null);
     let runLogs = $state<WorkflowRunResult[]>([]);
 
     onMount(loadList);
@@ -37,17 +29,16 @@
             await selectWorkflow(workflows[0].id);
         } else if (selectedId && !workflows.find(w => w.id === selectedId)) {
             selectedId = null;
-            editorText = '';
+            selectedWorkflow = null;
             runLogs = [];
         }
     }
 
     async function selectWorkflow(id: string) {
         selectedId = id;
-        message = null;
         const wf = await storage.getWorkflow(workspaceState.currentName, id);
         if (wf) {
-            editorText = JSON.stringify(wf, null, 2);
+            selectedWorkflow = wf;
             runLogs = await storage.listRunLogs(workspaceState.currentName, id, 10);
         }
     }
@@ -70,35 +61,17 @@
         await selectWorkflow(id);
     }
 
-    async function save() {
-        message = null;
-        try {
-            const parsed = JSON.parse(editorText) as Workflow;
-            if (!parsed.id) throw new Error('workflow.id is required');
-            await storage.saveWorkflow(workspaceState.currentName, parsed);
-            await triggerDispatcher.refresh();
-            await loadList();
-            message = 'Saved.';
-        } catch (err) {
-            message = `Save failed: ${err instanceof Error ? err.message : err}`;
-        }
+    async function onSave(wf: Workflow) {
+        await storage.saveWorkflow(workspaceState.currentName, wf);
+        await triggerDispatcher.refresh();
+        selectedWorkflow = wf;
+        workflows = workflows.map((w) => (w.id === wf.id ? wf : w));
     }
 
-    async function run() {
-        message = null;
-        running = true;
-        try {
-            const parsed = JSON.parse(editorText) as Workflow;
-            const result = await executor.run(parsed, {
-                workspace: workspaceState.currentName,
-                trigger: { type: 'manual' },
-            });
-            runLogs = await storage.listRunLogs(workspaceState.currentName, parsed.id, 10);
-            message = result.status === 'success' ? 'Run completed.' : `Run failed: ${result.error ?? 'unknown'}`;
-        } catch (err) {
-            message = `Run failed: ${err instanceof Error ? err.message : err}`;
-        } finally {
-            running = false;
+    async function onRun(_result: WorkflowRunResult) {
+        void _result;
+        if (selectedId) {
+            runLogs = await storage.listRunLogs(workspaceState.currentName, selectedId, 10);
         }
     }
 
@@ -108,7 +81,7 @@
         await storage.deleteWorkflow(workspaceState.currentName, selectedId);
         await triggerDispatcher.refresh();
         selectedId = null;
-        editorText = '';
+        selectedWorkflow = null;
         runLogs = [];
         await loadList();
     }
@@ -144,57 +117,55 @@
                     </button>
                 {/each}
             {/if}
+
+            {#if selectedId}
+                <button class="btn danger" onclick={remove}>Delete workflow</button>
+            {/if}
         </aside>
 
         <section class="editor">
-            {#if selectedId}
-                <div class="editor-toolbar">
-                    <button class="btn" disabled={running} onclick={save}>Save</button>
-                    <button class="btn primary" disabled={running} onclick={run}>
-                        {running ? 'Running…' : 'Run'}
-                    </button>
-                    <button class="btn danger" disabled={running} onclick={remove}>Delete</button>
-                </div>
-                <textarea
-                    class="json-editor"
-                    bind:value={editorText}
-                    spellcheck="false"
-                    disabled={running}
-                ></textarea>
-                {#if message}
-                    <p class="message">{message}</p>
-                {/if}
+            {#if selectedWorkflow}
+                {#key selectedWorkflow.id}
+                    <WorkflowEditor
+                        workflow={selectedWorkflow}
+                        workspace={workspaceState.currentName}
+                        onsave={onSave}
+                        onrun={onRun}
+                    />
+                {/key}
 
-                <h3>Recent runs</h3>
-                {#if runLogs.length === 0}
-                    <p class="empty">No runs yet.</p>
-                {:else}
-                    <ul class="runs">
-                        {#each runLogs as log (log.runId)}
-                            <li class="run" class:run-error={log.status === 'error'}>
-                                <div class="run-head">
-                                    <span class="run-status">{log.status}</span>
-                                    <span class="run-time">{formatTime(log.startedAt)}</span>
-                                    <span class="run-duration">{formatDuration(log.startedAt, log.finishedAt)}</span>
-                                </div>
-                                {#if log.error}
-                                    <p class="run-error-msg">{log.error}</p>
-                                {/if}
-                                <ol class="run-nodes">
-                                    {#each log.nodes as n (n.nodeId)}
-                                        <li class="run-node" class:err={n.status === 'error'}>
-                                            <code>{n.nodeId}</code>
-                                            <span class="run-node-status">{n.status}</span>
-                                            {#if n.error}
-                                                <span class="run-node-err">{n.error}</span>
-                                            {/if}
-                                        </li>
-                                    {/each}
-                                </ol>
-                            </li>
-                        {/each}
-                    </ul>
-                {/if}
+                <details class="runs-details">
+                    <summary>Recent runs ({runLogs.length})</summary>
+                    {#if runLogs.length === 0}
+                        <p class="empty">No runs yet.</p>
+                    {:else}
+                        <ul class="runs">
+                            {#each runLogs as log (log.runId)}
+                                <li class="run" class:run-error={log.status === 'error'}>
+                                    <div class="run-head">
+                                        <span class="run-status">{log.status}</span>
+                                        <span class="run-time">{formatTime(log.startedAt)}</span>
+                                        <span class="run-duration">{formatDuration(log.startedAt, log.finishedAt)}</span>
+                                    </div>
+                                    {#if log.error}
+                                        <p class="run-error-msg">{log.error}</p>
+                                    {/if}
+                                    <ol class="run-nodes">
+                                        {#each log.nodes as n (n.nodeId)}
+                                            <li class="run-node" class:err={n.status === 'error'}>
+                                                <code>{n.nodeId}</code>
+                                                <span class="run-node-status">{n.status}</span>
+                                                {#if n.error}
+                                                    <span class="run-node-err">{n.error}</span>
+                                                {/if}
+                                            </li>
+                                        {/each}
+                                    </ol>
+                                </li>
+                            {/each}
+                        </ul>
+                    {/if}
+                </details>
             {:else}
                 <p class="empty">Create or select a workflow to edit.</p>
             {/if}
@@ -205,6 +176,8 @@
 <style>
     .workflows-page {
         height: 100%;
+        display: flex;
+        flex-direction: column;
     }
 
     .page-header {
@@ -219,8 +192,7 @@
         font-weight: 600;
     }
 
-    .btn-primary,
-    .btn.primary {
+    .btn-primary {
         background-color: var(--pm-accent);
         color: var(--pm-text-inverse);
         border: none;
@@ -232,9 +204,11 @@
 
     .layout {
         display: grid;
-        grid-template-columns: 240px 1fr;
+        grid-template-columns: 200px 1fr;
         gap: var(--pm-space-lg);
-        align-items: flex-start;
+        align-items: stretch;
+        flex: 1;
+        min-height: 0;
     }
 
     .wf-list {
@@ -276,11 +250,7 @@
         display: flex;
         flex-direction: column;
         gap: var(--pm-space-sm);
-    }
-
-    .editor-toolbar {
-        display: flex;
-        gap: var(--pm-space-sm);
+        min-width: 0;
     }
 
     .btn {
@@ -294,36 +264,18 @@
     }
 
     .btn.danger {
-        color: var(--pm-status-error);
-        border-color: var(--pm-status-error);
+        color: var(--pm-error);
+        border-color: var(--pm-error);
         background: none;
+        margin-top: var(--pm-space-sm);
     }
 
-    .btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-
-    .json-editor {
-        width: 100%;
-        min-height: 320px;
-        font-family: var(--pm-font-mono);
-        font-size: var(--pm-font-size-sm);
-        padding: var(--pm-space-sm);
-        border: 1px solid var(--pm-border);
-        border-radius: var(--pm-radius-sm);
-        background-color: var(--pm-bg-primary);
-        color: var(--pm-text-primary);
-        resize: vertical;
-    }
-
-    .message {
-        font-size: var(--pm-font-size-xs);
-        color: var(--pm-text-secondary);
-    }
-
-    h3 {
+    .runs-details {
         margin-top: var(--pm-space-md);
+    }
+
+    .runs-details summary {
+        cursor: pointer;
         font-size: var(--pm-font-size-sm);
         font-weight: 600;
         color: var(--pm-text-secondary);
@@ -335,6 +287,7 @@
         display: flex;
         flex-direction: column;
         gap: var(--pm-space-sm);
+        margin-top: var(--pm-space-sm);
     }
 
     .run {
@@ -345,7 +298,7 @@
     }
 
     .run.run-error {
-        border-color: var(--pm-status-error);
+        border-color: var(--pm-error);
     }
 
     .run-head {
@@ -361,7 +314,7 @@
     }
 
     .run-error-msg {
-        color: var(--pm-status-error);
+        color: var(--pm-error);
         font-size: var(--pm-font-size-xs);
         margin-top: var(--pm-space-xs);
     }
@@ -384,11 +337,11 @@
     }
 
     .run-node.err {
-        color: var(--pm-status-error);
+        color: var(--pm-error);
     }
 
     .run-node-err {
-        color: var(--pm-status-error);
+        color: var(--pm-error);
     }
 
     .empty {

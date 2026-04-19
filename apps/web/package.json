@@ -24,6 +24,7 @@
 	},
 	"dependencies": {
 		"@pasmello/shared": "workspace:*",
+		"@xyflow/svelte": "^1.5.2",
 		"jszip": "^3.10.1",
 		"svelte-grid-extended": "^1.2.1"
 	}

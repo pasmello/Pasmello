@@ -1,0 +1,44 @@
+.svelte-flow {
+    --xy-background-color: var(--pm-bg-primary);
+    --xy-background-pattern-dots-color: var(--pm-border-subtle);
+    --xy-background-pattern-lines-color: var(--pm-border-subtle);
+
+    --xy-node-background-color-default: var(--pm-bg-surface);
+    --xy-node-border-default: 1px solid var(--pm-border);
+    --xy-node-color-default: var(--pm-text-primary);
+    --xy-node-boxshadow-default: var(--pm-shadow-sm);
+    --xy-node-boxshadow-selected: 0 0 0 2px var(--pm-accent);
+
+    --xy-edge-stroke: var(--pm-border);
+    --xy-edge-stroke-width: 1.5;
+    --xy-edge-stroke-selected: var(--pm-accent);
+
+    --xy-connectionline-stroke: var(--pm-accent);
+    --xy-connectionline-stroke-width: 1.5;
+
+    --xy-handle-background-color-default: var(--pm-accent);
+    --xy-handle-border-color-default: var(--pm-bg-primary);
+
+    --xy-controls-button-background-color-default: var(--pm-bg-surface-raised);
+    --xy-controls-button-background-color-hover-default: var(--pm-bg-tertiary);
+    --xy-controls-button-color-default: var(--pm-text-primary);
+    --xy-controls-button-border-color-default: var(--pm-border);
+
+    --xy-selection-background-color-default: var(--pm-accent-subtle);
+    --xy-selection-border-default: 1px dashed var(--pm-accent);
+
+    --xy-attribution-background-color-default: transparent;
+}
+
+.svelte-flow__edge.tinted-success .svelte-flow__edge-path {
+    stroke: var(--pm-success);
+}
+
+.svelte-flow__edge.tinted-skipped .svelte-flow__edge-path {
+    stroke: var(--pm-border-subtle);
+    stroke-dasharray: 4 3;
+}
+
+.svelte-flow__edge.tinted-error .svelte-flow__edge-path {
+    stroke: var(--pm-error);
+}

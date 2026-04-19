@@ -1,4 +1,5 @@
 import { api } from '$lib/api/client';
+import { eventBus } from '$lib/workflow/triggers';
 import type { ToolManifest } from '@pasmello/shared';
 
 class ToolsState {
@@ -23,6 +24,7 @@ class ToolsState {
         this.error = null;
         try {
             await api.tools.remove(id);
+            eventBus.emit('tool:uninstalled', { toolId: id });
             await this.loadTools();
         } catch (e) {
             this.error = e instanceof Error ? e.message : String(e);

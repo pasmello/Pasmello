@@ -7,6 +7,11 @@ export const conditional: NodeHandler = async (config, runtime) => {
         throw new Error('conditional: missing expression');
     }
     const inputs = Object.fromEntries(runtime.outputs);
-    const result = await evalInWorker(`return (${expression});`, inputs);
+    const result = await evalInWorker(
+        `return (${expression});`,
+        inputs,
+        undefined,
+        runtime.signal,
+    );
     return Boolean(result);
 };

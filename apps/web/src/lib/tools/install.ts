@@ -1,6 +1,7 @@
 import JSZip from 'jszip';
 import type { ToolManifest } from '@pasmello/shared';
 import { storage, isValidPathSegment, type ToolFile } from '$lib/storage';
+import { eventBus } from '$lib/workflow/triggers';
 
 export class ToolInstallError extends Error {
     constructor(message: string) {
@@ -51,6 +52,7 @@ export async function installFromZip(input: Blob | ArrayBuffer | Uint8Array): Pr
     await Promise.all(entries);
 
     await storage.installTool(manifest.id, files);
+    eventBus.emit('tool:installed', { toolId: manifest.id, version: manifest.version });
     return manifest;
 }
 

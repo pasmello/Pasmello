@@ -1,6 +1,8 @@
+export type EventFilter = Record<string, string | number | boolean | null>;
+
 export type WorkflowTrigger =
     | { type: 'manual' }
-    | { type: 'ui-event'; event: string };
+    | { type: 'ui-event'; event: string; filter?: EventFilter };
 
 export type WorkflowNodeType =
     | 'tool-action'
@@ -17,12 +19,22 @@ export interface NodeRetry {
     delayMs: number;
 }
 
+export interface NodePosition {
+    x: number;
+    y: number;
+}
+
 export interface WorkflowNode {
     id: string;
     type: WorkflowNodeType;
     config: Record<string, unknown>;
     retry?: NodeRetry;
     onError?: NodeErrorPolicy;
+    /** Join semantics for fan-in: `all` (wait for every incoming edge, default)
+     *  or `any` (fire on first resolved edge). v1 only honors `all`. */
+    joinMode?: 'all' | 'any';
+    /** Editor-managed layout coordinate. Ignored by the executor. */
+    position?: NodePosition;
 }
 
 export interface WorkflowEdge {

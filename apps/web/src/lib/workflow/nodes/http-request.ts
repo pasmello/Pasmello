@@ -1,6 +1,6 @@
 import type { NodeHandler } from './index.js';
 
-export const httpRequest: NodeHandler = async (config) => {
+export const httpRequest: NodeHandler = async (config, runtime) => {
     const { url, method, headers, body } = config as {
         url?: string;
         method?: string;
@@ -23,6 +23,7 @@ export const httpRequest: NodeHandler = async (config) => {
         method: method ?? 'GET',
         headers,
         body: body ?? undefined,
+        signal: runtime.signal,
     });
 
     let responseBody: unknown = await res.text();

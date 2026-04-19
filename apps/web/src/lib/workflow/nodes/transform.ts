@@ -7,5 +7,10 @@ export const transform: NodeHandler = async (config, runtime) => {
         throw new Error('transform: missing expression');
     }
     const inputs = Object.fromEntries(runtime.outputs);
-    return evalInWorker(`return (${expression});`, inputs);
+    return evalInWorker(
+        `return (${expression});`,
+        inputs,
+        undefined,
+        runtime.signal,
+    );
 };
