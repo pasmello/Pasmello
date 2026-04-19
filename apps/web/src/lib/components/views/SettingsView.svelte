@@ -1,11 +1,12 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { themeSettings } from '$lib/theme/settings.svelte';
+    import { pluginSettings } from '$lib/state/plugin-settings.svelte';
     import { themeRegistry } from '$lib/theme/registry.svelte';
     import { workspaceState } from '$lib/state/workspace.svelte';
+    import { toolsState } from '$lib/state/tools.svelte';
     import { bridgeManager } from '$lib/sandbox/bridge.svelte';
     import { downloadStorageZip, importStorageZip } from '$lib/storage/portable';
-    import ThemeSettingsRenderer from './ThemeSettingsRenderer.svelte';
+    import PluginSettingsRenderer from './PluginSettingsRenderer.svelte';
 
     let newWorkspaceName = $state('');
     let createError = $state<string | null>(null);
@@ -15,6 +16,7 @@
 
     onMount(async () => {
         await workspaceState.loadWorkspaces();
+        await toolsState.loadTools();
     });
 
     async function handleCreate() {
@@ -65,41 +67,17 @@
     let hasThemeSettings = $derived(
         activeManifest?.settings != null && activeManifest.settings.length > 0
     );
+    let toolsWithSettings = $derived(
+        toolsState.installed.filter((t) => t.settings && t.settings.length > 0)
+    );
 </script>
 
 <div class="settings-page">
     <div class="page-header">
         <h2>Settings</h2>
+        <p class="sub">Settings below are scoped to <strong>{workspaceState.currentName}</strong>.</p>
     </div>
     <div class="settings-sections">
-        <!-- Theme Selector -->
-        <section class="setting-group">
-            <h3>Theme</h3>
-            <div class="theme-cards">
-                {#each themeRegistry.all as themeDef (themeDef.manifest.id)}
-                    <div
-                        class="theme-card"
-                        class:active={themeSettings.activeThemeId === themeDef.manifest.id}
-                    >
-                        <div class="theme-card-info">
-                            <span class="theme-card-name">{themeDef.manifest.name}</span>
-                            <span class="theme-card-desc">{themeDef.manifest.description}</span>
-                        </div>
-                        {#if themeSettings.activeThemeId === themeDef.manifest.id}
-                            <span class="theme-badge">Active</span>
-                        {:else}
-                            <button
-                                class="theme-use-btn"
-                                onclick={() => themeSettings.setActiveTheme(themeDef.manifest.id)}
-                            >
-                                Use
-                            </button>
-                        {/if}
-                    </div>
-                {/each}
-            </div>
-        </section>
-
         <!-- Color Scheme -->
         <section class="setting-group">
             <h3>Appearance</h3>
@@ -108,20 +86,41 @@
                     <span class="setting-label">Color Scheme</span>
                     <span class="setting-description">Switch between light and dark mode</span>
                 </div>
-                <button class="setting-control" onclick={() => themeSettings.toggleColorScheme()}>
-                    {themeSettings.colorScheme === 'dark' ? 'Dark' : 'Light'}
+                <button class="setting-control" onclick={() => pluginSettings.toggleColorScheme()}>
+                    {pluginSettings.colorScheme === 'dark' ? 'Dark' : 'Light'}
                 </button>
             </div>
+            <p class="hint">Pick a theme in the <a href="/themes">Themes</a> tab.</p>
         </section>
 
         <!-- Theme-Specific Settings -->
         {#if hasThemeSettings && activeManifest}
             <section class="setting-group">
-                <h3>{activeManifest.name} Settings</h3>
-                <ThemeSettingsRenderer
+                <h3>{activeManifest.name} theme settings</h3>
+                <PluginSettingsRenderer
                     settings={activeManifest.settings!}
-                    themeId={activeManifest.id}
+                    kind="theme"
+                    id={activeManifest.id}
                 />
+            </section>
+        {/if}
+
+        <!-- Installed-tool Settings -->
+        {#if toolsWithSettings.length > 0}
+            <section class="setting-group">
+                <h3>Tool settings</h3>
+                <div class="tool-settings-list">
+                    {#each toolsWithSettings as tool (tool.id)}
+                        <div class="tool-settings-block">
+                            <h4>{tool.name} <span class="tool-id">({tool.id})</span></h4>
+                            <PluginSettingsRenderer
+                                settings={tool.settings!}
+                                kind="tool"
+                                id={tool.id}
+                            />
+                        </div>
+                    {/each}
+                </div>
             </section>
         {/if}
 
@@ -205,6 +204,37 @@
         font-weight: 600;
     }
 
+    .page-header .sub {
+        margin-top: var(--pm-space-xs);
+        font-size: var(--pm-font-size-sm);
+        color: var(--pm-text-tertiary);
+    }
+
+    .hint {
+        margin-top: var(--pm-space-xs);
+        font-size: var(--pm-font-size-xs);
+        color: var(--pm-text-tertiary);
+    }
+
+    .tool-settings-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--pm-space-lg);
+    }
+
+    .tool-settings-block h4 {
+        font-size: var(--pm-font-size-base);
+        font-weight: 600;
+        margin-bottom: var(--pm-space-sm);
+    }
+
+    .tool-id {
+        font-family: var(--pm-font-mono);
+        font-size: var(--pm-font-size-xs);
+        color: var(--pm-text-tertiary);
+        font-weight: 400;
+    }
+
     .settings-sections {
         display: flex;
         flex-direction: column;
@@ -217,72 +247,6 @@
         margin-bottom: var(--pm-space-md);
         padding-bottom: var(--pm-space-sm);
         border-bottom: 1px solid var(--pm-border-subtle);
-    }
-
-    /* Theme Cards */
-    .theme-cards {
-        display: flex;
-        flex-direction: column;
-        gap: var(--pm-space-sm);
-    }
-
-    .theme-card {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: var(--pm-space-sm) var(--pm-space-md);
-        border-radius: var(--pm-radius-sm);
-        background-color: var(--pm-bg-surface);
-        border: 1px solid var(--pm-border-subtle);
-        transition: all var(--pm-transition-fast);
-    }
-
-    .theme-card.active {
-        border-color: var(--pm-accent);
-        background-color: var(--pm-accent-subtle);
-    }
-
-    .theme-card-info {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-    }
-
-    .theme-card-name {
-        font-size: var(--pm-font-size-sm);
-        font-weight: 600;
-        color: var(--pm-text-primary);
-    }
-
-    .theme-card-desc {
-        font-size: var(--pm-font-size-xs);
-        color: var(--pm-text-tertiary);
-    }
-
-    .theme-badge {
-        font-size: var(--pm-font-size-xs);
-        color: var(--pm-accent);
-        background-color: var(--pm-bg-primary);
-        padding: 2px 8px;
-        border-radius: var(--pm-radius-full);
-        font-weight: 500;
-    }
-
-    .theme-use-btn {
-        padding: var(--pm-space-xs) var(--pm-space-md);
-        background-color: var(--pm-bg-tertiary);
-        border: 1px solid var(--pm-border);
-        border-radius: var(--pm-radius-sm);
-        color: var(--pm-text-secondary);
-        cursor: pointer;
-        font-size: var(--pm-font-size-xs);
-        transition: all var(--pm-transition-fast);
-    }
-
-    .theme-use-btn:hover {
-        background-color: var(--pm-accent-subtle);
-        border-color: var(--pm-accent);
-        color: var(--pm-accent);
     }
 
     /* Setting Row */

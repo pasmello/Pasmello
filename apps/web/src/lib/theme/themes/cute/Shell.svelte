@@ -1,9 +1,9 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
-    import { themeSettings } from '$lib/theme/settings.svelte';
+    import { pluginSettings } from '$lib/state/plugin-settings.svelte';
 
     interface Props {
-        currentView: 'workspace' | 'tools' | 'workflows' | 'settings';
+        currentView: 'workspace' | 'tools' | 'workflows' | 'themes' | 'settings';
         children: Snippet;
     }
 
@@ -40,14 +40,14 @@
     });
 
     $effect(() => {
-        const accent = themeSettings.getThemeSetting('cute', 'accentColor') as string | undefined;
+        const accent = pluginSettings.getThemeSetting('cute', 'accentColor') as string | undefined;
         if (accent) {
             document.documentElement.style.setProperty('--pm-accent', accent);
         }
     });
 
     $effect(() => {
-        const bg = themeSettings.getThemeSetting('cute', 'backgroundColor') as string | undefined;
+        const bg = pluginSettings.getThemeSetting('cute', 'backgroundColor') as string | undefined;
         if (bg) {
             document.documentElement.style.setProperty('--pm-bg-primary', bg);
         }
@@ -68,12 +68,16 @@
             <span class="bar-icon">&#8644;</span>
             <span class="bar-label">Workflows</span>
         </a>
+        <a href="/themes" class="bar-item" class:active={currentView === 'themes'}>
+            <span class="bar-icon">&#127912;</span>
+            <span class="bar-label">Themes</span>
+        </a>
         <a href="/settings" class="bar-item" class:active={currentView === 'settings'}>
             <span class="bar-icon">&#9881;</span>
             <span class="bar-label">Settings</span>
         </a>
-        <button class="bar-item theme-btn" onclick={() => themeSettings.toggleColorScheme()}>
-            {themeSettings.colorScheme === 'dark' ? '☀️' : '🌙'}
+        <button class="bar-item theme-btn" onclick={() => pluginSettings.toggleColorScheme()}>
+            {pluginSettings.colorScheme === 'dark' ? '☀️' : '🌙'}
         </button>
     </nav>
     <main class="content" class:bar-hidden={!barVisible}>

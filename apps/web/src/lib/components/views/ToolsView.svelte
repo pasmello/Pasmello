@@ -2,8 +2,29 @@
     import { onMount } from 'svelte';
     import { toolsState } from '$lib/state/tools.svelte';
     import { workspaceState } from '$lib/state/workspace.svelte';
-    import { installFromZip, installFromUrl, ToolInstallError } from '$lib/tools/install';
+    import {
+        installFromZip,
+        installFromUrl,
+        ToolInstallError,
+        ToolInstallCancelled,
+        type ConsentProvider,
+    } from '$lib/tools/install';
     import type { ToolManifest } from '@pasmello/shared';
+    import PermissionsConsentModal from '$lib/components/PermissionsConsentModal.svelte';
+
+    let consentRequest = $state<{ manifest: ToolManifest; resolve: (ok: boolean) => void } | null>(null);
+
+    const consentProvider: ConsentProvider = (manifest) =>
+        new Promise<boolean>((resolve) => {
+            consentRequest = { manifest, resolve };
+        });
+
+    function resolveConsent(accepted: boolean) {
+        const req = consentRequest;
+        if (!req) return;
+        consentRequest = null;
+        req.resolve(accepted);
+    }
 
     let installUrl = $state('');
     let installing = $state(false);
@@ -54,9 +75,13 @@
             await action();
             await toolsState.loadTools();
         } catch (err) {
-            installError = err instanceof ToolInstallError || err instanceof Error
-                ? err.message
-                : String(err);
+            if (err instanceof ToolInstallCancelled) {
+                // Silent cancel — user clicked Cancel on the consent prompt.
+            } else if (err instanceof ToolInstallError || err instanceof Error) {
+                installError = err.message;
+            } else {
+                installError = String(err);
+            }
         } finally {
             installing = false;
         }
@@ -65,14 +90,14 @@
     async function handleFiles(fileList: FileList | null) {
         if (!fileList || fileList.length === 0) return;
         for (const file of Array.from(fileList)) {
-            await runInstall(() => installFromZip(file));
+            await runInstall(() => installFromZip(file, { consentProvider }));
         }
     }
 
     async function handleUrl() {
         const url = installUrl.trim();
         if (!url) return;
-        await runInstall(() => installFromUrl(url));
+        await runInstall(() => installFromUrl(url, { consentProvider }));
         if (!installError) installUrl = '';
     }
 
@@ -184,6 +209,13 @@
         </div>
     {/if}
 </div>
+
+{#if consentRequest}
+    <PermissionsConsentModal
+        manifest={consentRequest.manifest}
+        onresolve={resolveConsent}
+    />
+{/if}
 
 <style>
     .tools-page {

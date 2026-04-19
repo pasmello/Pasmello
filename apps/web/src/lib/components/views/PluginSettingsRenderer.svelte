@@ -1,20 +1,25 @@
 <script lang="ts">
-    import type { ThemeSettingDef } from '@pasmello/shared';
-    import { themeSettings } from '$lib/theme/settings.svelte';
+    import type { PluginSettingDef } from '@pasmello/shared';
+    import { pluginSettings } from '$lib/state/plugin-settings.svelte';
 
     interface Props {
-        settings: ThemeSettingDef[];
-        themeId: string;
+        settings: PluginSettingDef[];
+        kind: 'theme' | 'tool';
+        id: string;
     }
 
-    let { settings, themeId }: Props = $props();
+    let { settings, kind, id }: Props = $props();
 
-    function getValue(setting: ThemeSettingDef): unknown {
-        return themeSettings.getThemeSetting(themeId, setting.key) ?? setting.default;
+    function getValue(setting: PluginSettingDef): unknown {
+        const stored = kind === 'theme'
+            ? pluginSettings.getThemeSetting(id, setting.key)
+            : pluginSettings.getToolSetting(id, setting.key);
+        return stored ?? setting.default;
     }
 
     function setValue(key: string, value: unknown) {
-        themeSettings.setThemeSetting(themeId, key, value);
+        if (kind === 'theme') pluginSettings.setThemeSetting(id, key, value);
+        else pluginSettings.setToolSetting(id, key, value);
     }
 </script>
 

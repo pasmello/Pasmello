@@ -1,10 +1,10 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
-    import { themeSettings } from '$lib/theme/settings.svelte';
+    import { pluginSettings } from '$lib/state/plugin-settings.svelte';
     import { workspaceState } from '$lib/state/workspace.svelte';
 
     interface Props {
-        currentView: 'workspace' | 'tools' | 'workflows' | 'settings';
+        currentView: 'workspace' | 'tools' | 'workflows' | 'themes' | 'settings';
         children: Snippet;
     }
 
@@ -30,14 +30,18 @@
                 <span class="nav-icon">&#8644;</span>
                 <span>Workflows</span>
             </a>
+            <a href="/themes" class="nav-item" class:active={currentView === 'themes'}>
+                <span class="nav-icon">&#127912;</span>
+                <span>Themes</span>
+            </a>
             <a href="/settings" class="nav-item" class:active={currentView === 'settings'}>
                 <span class="nav-icon">&#9881;</span>
                 <span>Settings</span>
             </a>
         </nav>
         <div class="sidebar-footer">
-            <button class="theme-toggle" onclick={() => themeSettings.toggleColorScheme()}>
-                {themeSettings.colorScheme === 'dark' ? '☀️' : '🌙'}
+            <button class="theme-toggle" onclick={() => pluginSettings.toggleColorScheme()}>
+                {pluginSettings.colorScheme === 'dark' ? '☀️' : '🌙'}
             </button>
         </div>
     </aside>

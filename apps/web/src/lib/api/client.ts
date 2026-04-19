@@ -1,4 +1,5 @@
-import type { Workspace, ToolManifest, ThemeSettings } from '@pasmello/shared';
+import type { Workspace, ToolManifest } from '@pasmello/shared';
+import { defaultWorkspaceSettings } from '@pasmello/shared';
 import { storage, assertPathSegment, type ToolFile } from '$lib/storage';
 
 let initPromise: Promise<void> | null = null;
@@ -33,6 +34,7 @@ export const api = {
                 name,
                 tools: [],
                 layout: { columns: 12, items: [] },
+                settings: defaultWorkspaceSettings(),
             };
             await storage.saveWorkspace(ws);
             return ws;
@@ -68,21 +70,6 @@ export const api = {
         async remove(id: string): Promise<void> {
             await ensureInit();
             await storage.removeTool(id);
-        },
-    },
-    settings: {
-        async getTheme(): Promise<ThemeSettings> {
-            await ensureInit();
-            return storage.getThemeSettings();
-        },
-        async updateTheme(data: ThemeSettings): Promise<ThemeSettings> {
-            await ensureInit();
-            if (!data.activeTheme) throw new Error('activeTheme is required');
-            if (data.colorScheme !== 'light' && data.colorScheme !== 'dark') {
-                throw new Error("colorScheme must be 'light' or 'dark'");
-            }
-            await storage.saveThemeSettings(data);
-            return data;
         },
     },
 };

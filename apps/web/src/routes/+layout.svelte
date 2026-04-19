@@ -5,7 +5,7 @@
     import { page } from '$app/stores';
     import { bridgeManager } from '$lib/sandbox/bridge.svelte';
     import { workspaceState } from '$lib/state/workspace.svelte';
-    import { themeSettings } from '$lib/theme/settings.svelte';
+    import { pluginSettings } from '$lib/state/plugin-settings.svelte';
     import { themeRegistry } from '$lib/theme/registry.svelte';
     import { applyThemeTokens } from '$lib/theme/apply-tokens';
     import { bootstrapApp } from '$lib/bootstrap';
@@ -17,6 +17,7 @@
         $page.url.pathname === '/' ? 'workspace' as const :
         $page.url.pathname.startsWith('/tools') ? 'tools' as const :
         $page.url.pathname.startsWith('/workflows') ? 'workflows' as const :
+        $page.url.pathname.startsWith('/themes') ? 'themes' as const :
         $page.url.pathname.startsWith('/settings') ? 'settings' as const :
         'workspace' as const
     );
@@ -24,11 +25,11 @@
     // Defer shell swap while on settings page.
     // Tokens (colors/fonts) update immediately, but the shell layout
     // only changes when navigating away from settings.
-    let renderedThemeId = $state(themeSettings.activeThemeId);
+    let renderedThemeId = $state(pluginSettings.activeThemeId);
 
     $effect(() => {
         if (currentView !== 'settings') {
-            renderedThemeId = themeSettings.activeThemeId;
+            renderedThemeId = pluginSettings.activeThemeId;
         }
     });
 
@@ -36,7 +37,7 @@
     let prevView = $state(currentView);
     $effect(() => {
         if (prevView === 'settings' && currentView !== 'settings') {
-            renderedThemeId = themeSettings.activeThemeId;
+            renderedThemeId = pluginSettings.activeThemeId;
         }
         prevView = currentView;
     });
@@ -61,16 +62,22 @@
 
     onMount(async () => {
         await bootstrapApp();
+        await workspaceState.loadWorkspace(workspaceState.currentName);
         bridgeManager.init(workspaceState.currentName);
         await triggerDispatcher.init(workspaceState.currentName);
         bootstrapped = true;
+    });
+
+    // Keep the data-theme attribute in sync with the workspace's colorScheme.
+    $effect(() => {
+        document.documentElement.setAttribute('data-theme', pluginSettings.colorScheme);
     });
 
     // Apply CSS tokens immediately when theme or color scheme changes
     // (this is what gives instant color preview on settings page)
     $effect(() => {
         const manifest = themeRegistry.activeManifest;
-        const scheme = themeSettings.colorScheme;
+        const scheme = pluginSettings.colorScheme;
         if (manifest) {
             applyThemeTokens(manifest, scheme);
         }
@@ -78,7 +85,7 @@
 
     // Broadcast theme to tool iframes
     $effect(() => {
-        themeSettings.colorScheme;
+        pluginSettings.colorScheme;
         bridgeManager.broadcastTheme();
     });
 </script>

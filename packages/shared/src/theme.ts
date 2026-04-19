@@ -1,16 +1,4 @@
-export interface ThemeManifest {
-    id: string;
-    name: string;
-    version: string;
-    description: string;
-    author?: string;
-    builtIn: boolean;
-    settings?: ThemeSettingDef[];
-    tokens?: Record<string, string>;
-    darkTokens?: Record<string, string>;
-}
-
-export interface ThemeSettingDef {
+export interface PluginSettingDef {
     key: string;
     type: 'color' | 'select' | 'toggle' | 'range' | 'text';
     label: string;
@@ -21,8 +9,17 @@ export interface ThemeSettingDef {
     max?: number;
 }
 
-export interface ThemeSettings {
-    activeTheme: string;
-    colorScheme: 'light' | 'dark';
-    perTheme: Record<string, Record<string, unknown>>;
+/** Back-compat alias for the original pre-unification name. */
+export type ThemeSettingDef = PluginSettingDef;
+
+export interface ThemeManifest {
+    id: string;
+    name: string;
+    version: string;
+    description: string;
+    author?: string;
+    builtIn: boolean;
+    settings?: PluginSettingDef[];
+    tokens?: Record<string, string>;
+    darkTokens?: Record<string, string>;
 }

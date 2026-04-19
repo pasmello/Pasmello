@@ -1,3 +1,5 @@
+import type { PluginSettingDef } from './theme.js';
+
 export interface ToolManifest {
     id: string;
     name: string;
@@ -6,6 +8,10 @@ export interface ToolManifest {
     entry: string;
     permissions: ToolPermissions;
     actions: Record<string, ToolAction>;
+    /** Declarative per-plugin settings, rendered in the workspace settings UI
+     *  and exposed to the tool via `sdk.settings.get/set`. Values persist in
+     *  `workspace.settings.tools[toolId]`. */
+    settings?: PluginSettingDef[];
 }
 
 export interface ToolPermissions {

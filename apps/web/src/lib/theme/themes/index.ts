@@ -8,6 +8,6 @@ import AdvancedShell from './advanced/Shell.svelte';
 import MonolithicShell from './monolithic/Shell.svelte';
 import CuteShell from './cute/Shell.svelte';
 
-themeRegistry.register({ manifest: advancedManifest, component: AdvancedShell });
-themeRegistry.register({ manifest: monolithicManifest, component: MonolithicShell });
-themeRegistry.register({ manifest: cuteManifest, component: CuteShell });
+themeRegistry.register({ manifest: advancedManifest, component: AdvancedShell, source: 'builtin' });
+themeRegistry.register({ manifest: monolithicManifest, component: MonolithicShell, source: 'builtin' });
+themeRegistry.register({ manifest: cuteManifest, component: CuteShell, source: 'builtin' });

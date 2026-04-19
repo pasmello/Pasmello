@@ -10,8 +10,27 @@ export class ToolInstallError extends Error {
     }
 }
 
+export type ConsentProvider = (manifest: ToolManifest) => Promise<boolean>;
+
+export interface InstallOptions {
+    /** If provided, called with the parsed manifest BEFORE any OPFS write.
+     *  Return `false` (or throw) to abort. When omitted, installation proceeds
+     *  without a prompt — used for builtin auto-install. */
+    consentProvider?: ConsentProvider;
+}
+
+export class ToolInstallCancelled extends Error {
+    constructor() {
+        super('Installation cancelled by user.');
+        this.name = 'ToolInstallCancelled';
+    }
+}
+
 /** Install a tool from a zip Blob/ArrayBuffer. Returns the installed manifest. */
-export async function installFromZip(input: Blob | ArrayBuffer | Uint8Array): Promise<ToolManifest> {
+export async function installFromZip(
+    input: Blob | ArrayBuffer | Uint8Array,
+    options: InstallOptions = {},
+): Promise<ToolManifest> {
     const zip = await JSZip.loadAsync(input as never);
 
     const root = stripCommonPrefix(zip);
@@ -32,6 +51,11 @@ export async function installFromZip(input: Blob | ArrayBuffer | Uint8Array): Pr
     }
     if (!manifest.name) throw new ToolInstallError('manifest.name is required');
     if (!manifest.version) throw new ToolInstallError('manifest.version is required');
+
+    if (options.consentProvider) {
+        const approved = await options.consentProvider(manifest);
+        if (!approved) throw new ToolInstallCancelled();
+    }
 
     const files: ToolFile[] = [];
     const entries: Promise<void>[] = [];
@@ -57,11 +81,11 @@ export async function installFromZip(input: Blob | ArrayBuffer | Uint8Array): Pr
 }
 
 /** Install from a URL (must be CORS-accessible). */
-export async function installFromUrl(url: string): Promise<ToolManifest> {
+export async function installFromUrl(url: string, options: InstallOptions = {}): Promise<ToolManifest> {
     const res = await fetch(url);
     if (!res.ok) throw new ToolInstallError(`download failed: HTTP ${res.status}`);
     const buffer = await res.arrayBuffer();
-    return installFromZip(buffer);
+    return installFromZip(buffer, options);
 }
 
 /** Install builtins bundled under apps/web/static/builtins/. Returns the ids

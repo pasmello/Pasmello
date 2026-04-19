@@ -1,22 +1,22 @@
 import type {
     Workspace,
     ToolManifest,
-    ThemeSettings,
     Workflow,
     WorkflowRunResult,
 } from '@pasmello/shared';
-import { assertPathSegment, type Storage, type ToolFile } from './types.js';
+import { defaultWorkspaceSettings } from '@pasmello/shared';
+import {
+    assertPathSegment,
+    type LegacyThemeSettings,
+    type Storage,
+    type ToolFile,
+} from './types.js';
 
 const DEFAULT_WORKSPACE: Workspace = {
     name: 'default',
     tools: [],
     layout: { columns: 12, items: [] },
-};
-
-const DEFAULT_THEME_SETTINGS: ThemeSettings = {
-    activeTheme: 'advanced',
-    colorScheme: 'dark',
-    perTheme: {},
+    settings: defaultWorkspaceSettings(),
 };
 
 const TOP_LEVEL_DIRS = ['workspaces', 'tools', 'themes', 'workflows', 'logs'];
@@ -168,14 +168,12 @@ export class OpfsStorage implements Storage {
         await dir.removeEntry(`${key}.json`).catch(() => {});
     }
 
-    async getThemeSettings(): Promise<ThemeSettings> {
-        const data = await this.readJson<ThemeSettings>(['settings.json']);
-        if (!data) return { ...DEFAULT_THEME_SETTINGS, perTheme: {} };
-        return { ...DEFAULT_THEME_SETTINGS, ...data, perTheme: data.perTheme ?? {} };
-    }
-
-    async saveThemeSettings(settings: ThemeSettings): Promise<void> {
-        await this.writeJson(['settings.json'], settings);
+    async migrateGlobalThemeSettings(): Promise<LegacyThemeSettings | null> {
+        const data = await this.readJson<LegacyThemeSettings>(['settings.json']);
+        if (!data) return null;
+        const root = await this.root();
+        await root.removeEntry('settings.json').catch(() => {});
+        return data;
     }
 
     async listWorkflows(workspace: string): Promise<Workflow[]> {

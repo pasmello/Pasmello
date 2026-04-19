@@ -1,12 +1,15 @@
 import type { ThemeManifest } from '@pasmello/shared';
-import { themeSettings } from './settings.svelte';
+import { pluginSettings } from '$lib/state/plugin-settings.svelte';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyComponent = any;
 
+export type ThemeSource = 'builtin' | 'installed';
+
 export interface ThemeDefinition {
     manifest: ThemeManifest;
     component: AnyComponent;
+    source: ThemeSource;
 }
 
 class ThemeRegistry {
@@ -21,7 +24,7 @@ class ThemeRegistry {
     }
 
     get active(): ThemeDefinition | undefined {
-        return this.themes.get(themeSettings.activeThemeId);
+        return this.themes.get(pluginSettings.activeThemeId);
     }
 
     get activeComponent(): AnyComponent {
@@ -34,6 +37,10 @@ class ThemeRegistry {
 
     getManifest(id: string): ThemeManifest | undefined {
         return this.themes.get(id)?.manifest;
+    }
+
+    get(id: string): ThemeDefinition | undefined {
+        return this.themes.get(id);
     }
 }
 

@@ -3,11 +3,12 @@ import { Storage } from './storage.js';
 import { Http } from './http.js';
 import { Actions } from './actions.js';
 import { UI } from './ui.js';
+import { Settings } from './settings.js';
 
 /**
  * The Pasmello Tool SDK.
  * Tools import this and call `initSDK()` to get access to
- * storage, HTTP, actions, and UI capabilities.
+ * storage, HTTP, actions, settings, and UI capabilities.
  */
 export class PasmelloSDK {
     readonly channel: Channel;
@@ -15,6 +16,7 @@ export class PasmelloSDK {
     readonly http: Http;
     readonly actions: Actions;
     readonly ui: UI;
+    readonly settings: Settings;
 
     constructor() {
         this.channel = new Channel();
@@ -22,6 +24,7 @@ export class PasmelloSDK {
         this.http = new Http(this.channel);
         this.actions = new Actions(this.channel);
         this.ui = new UI(this.channel);
+        this.settings = new Settings(this.channel);
     }
 
     /** Wait for the SDK to be ready (MessagePort received from host). */

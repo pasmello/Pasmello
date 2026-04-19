@@ -1,6 +1,23 @@
 import { api } from '$lib/api/client';
 import { eventBus, triggerDispatcher } from '$lib/workflow/triggers';
 import type { Workspace } from '@pasmello/shared';
+import { defaultWorkspaceSettings } from '@pasmello/shared';
+
+function backfillSettings(ws: Workspace): Workspace {
+    if (ws.settings && typeof ws.settings === 'object') {
+        const s = ws.settings;
+        return {
+            ...ws,
+            settings: {
+                activeThemeId: s.activeThemeId ?? 'advanced',
+                colorScheme: s.colorScheme ?? 'dark',
+                themes: s.themes ?? {},
+                tools: s.tools ?? {},
+            },
+        };
+    }
+    return { ...ws, settings: defaultWorkspaceSettings() };
+}
 
 class WorkspaceState {
     workspaces = $state<string[]>([]);
@@ -22,7 +39,13 @@ class WorkspaceState {
         this.loading = true;
         this.error = null;
         try {
-            this.current = await api.workspaces.get(name);
+            const ws = await api.workspaces.get(name);
+            const filled = backfillSettings(ws);
+            if (!ws.settings) {
+                // Persist the backfill so we don't rehydrate defaults every load
+                await api.workspaces.update(name, filled);
+            }
+            this.current = filled;
             this.currentName = name;
         } catch (e) {
             this.error = e instanceof Error ? e.message : String(e);

@@ -1,7 +1,6 @@
 import type {
     Workspace,
     ToolManifest,
-    ThemeSettings,
     Workflow,
     WorkflowRunResult,
 } from '@pasmello/shared';
@@ -29,8 +28,10 @@ export interface Storage {
     setToolData(workspace: string, toolId: string, key: string, value: string): Promise<void>;
     deleteToolData(workspace: string, toolId: string, key: string): Promise<void>;
 
-    getThemeSettings(): Promise<ThemeSettings>;
-    saveThemeSettings(settings: ThemeSettings): Promise<void>;
+    /** One-shot migration helper: read + delete the legacy global settings.json
+     *  (pre-v1 theme settings, before the move onto Workspace.settings). Returns
+     *  the parsed blob or null if the file doesn't exist. */
+    migrateGlobalThemeSettings(): Promise<LegacyThemeSettings | null>;
 
     listWorkflows(workspace: string): Promise<Workflow[]>;
     getWorkflow(workspace: string, id: string): Promise<Workflow | null>;
@@ -49,6 +50,15 @@ export interface Storage {
 export interface ToolFile {
     path: string;
     data: Uint8Array;
+}
+
+/** Shape of the legacy global `settings.json` file that used to live at OPFS
+ *  root. Kept here as a local type so the shared package doesn't have to
+ *  re-export `ThemeSettings` purely for a one-shot migration. */
+export interface LegacyThemeSettings {
+    activeTheme?: string;
+    colorScheme?: 'light' | 'dark';
+    perTheme?: Record<string, Record<string, unknown>>;
 }
 
 export const PATH_SEGMENT_RE = /^[a-zA-Z0-9_\-.]+$/;
