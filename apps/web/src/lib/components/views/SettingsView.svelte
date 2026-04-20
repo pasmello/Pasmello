@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
+    import { base } from '$app/paths';
     import { pluginSettings } from '$lib/state/plugin-settings.svelte';
     import { themeRegistry } from '$lib/theme/registry.svelte';
     import { workspaceState } from '$lib/state/workspace.svelte';
@@ -90,7 +91,7 @@
                     {pluginSettings.colorScheme === 'dark' ? 'Dark' : 'Light'}
                 </button>
             </div>
-            <p class="hint">Pick a theme in the <a href="/themes">Themes</a> tab.</p>
+            <p class="hint">Pick a theme in the <a href="{base}/themes">Themes</a> tab.</p>
         </section>
 
         <!-- Theme-Specific Settings -->

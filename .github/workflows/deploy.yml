@@ -39,6 +39,9 @@ jobs:
       - name: Ensure .nojekyll
         run: touch apps/web/build/.nojekyll
 
+      - name: SPA fallback (404.html)
+        run: cp apps/web/build/index.html apps/web/build/404.html
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: apps/web/build

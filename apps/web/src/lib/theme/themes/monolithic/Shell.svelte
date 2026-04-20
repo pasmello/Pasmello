@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
+    import { base } from '$app/paths';
     import { pluginSettings } from '$lib/state/plugin-settings.svelte';
     import { workspaceState } from '$lib/state/workspace.svelte';
 
@@ -23,23 +24,23 @@
             {/if}
         </div>
         <nav class="sidebar-nav">
-            <a href="/" class="nav-item" class:active={currentView === 'workspace'}>
+            <a href="{base}/" class="nav-item" class:active={currentView === 'workspace'}>
                 <span class="nav-icon">&#9633;</span>
                 <span class="nav-text">Workspace</span>
             </a>
-            <a href="/tools" class="nav-item" class:active={currentView === 'tools'}>
+            <a href="{base}/tools" class="nav-item" class:active={currentView === 'tools'}>
                 <span class="nav-icon">&#128295;</span>
                 <span class="nav-text">Tools</span>
             </a>
-            <a href="/workflows" class="nav-item" class:active={currentView === 'workflows'}>
+            <a href="{base}/workflows" class="nav-item" class:active={currentView === 'workflows'}>
                 <span class="nav-icon">&#8644;</span>
                 <span class="nav-text">Workflows</span>
             </a>
-            <a href="/themes" class="nav-item" class:active={currentView === 'themes'}>
+            <a href="{base}/themes" class="nav-item" class:active={currentView === 'themes'}>
                 <span class="nav-icon">&#127912;</span>
                 <span class="nav-text">Themes</span>
             </a>
-            <a href="/settings" class="nav-item" class:active={currentView === 'settings'}>
+            <a href="{base}/settings" class="nav-item" class:active={currentView === 'settings'}>
                 <span class="nav-icon">&#9881;</span>
                 <span class="nav-text">Settings</span>
             </a>
