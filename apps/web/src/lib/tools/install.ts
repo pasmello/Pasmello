@@ -94,12 +94,25 @@ export async function installFromUrl(url: string, options: InstallOptions = {}):
     return installFromZip(buffer, options);
 }
 
+/** Fetch a builtin zip bypassing the browser cache. Static hosts (GitHub
+ *  Pages, Cloudflare Pages, …) typically set short `max-age` on static files,
+ *  but that's still enough to miss a post-deploy version bump and leave users
+ *  stuck on an old chrome. `cache: 'no-store'` bypasses that. */
+async function fetchBuiltinZip(url: string): Promise<ArrayBuffer | null> {
+    try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) return null;
+        return await res.arrayBuffer();
+    } catch {
+        return null;
+    }
+}
+
 /** Peek at a bundled tool zip's manifest version without writing to OPFS. */
 async function peekBundledToolVersion(url: string): Promise<string | null> {
     try {
-        const res = await fetch(url);
-        if (!res.ok) return null;
-        const buffer = await res.arrayBuffer();
+        const buffer = await fetchBuiltinZip(url);
+        if (!buffer) return null;
         const zip = await JSZip.loadAsync(buffer);
         const root = stripCommonPrefix(zip);
         const entry = root.file('tool.manifest.json');
@@ -124,7 +137,12 @@ export async function installBuiltinsIfMissing(builtinIds: string[]): Promise<st
             if (!bundled || bundled === existing.version) continue;
         }
         try {
-            await installFromUrl(url);
+            const buffer = await fetchBuiltinZip(url);
+            if (!buffer) {
+                console.warn(`[Pasmello] builtin "${id}" fetch returned empty`);
+                continue;
+            }
+            await installFromZip(buffer);
             installed.push(id);
         } catch (err) {
             console.warn(`[Pasmello] failed to install builtin "${id}"`, err);
@@ -198,12 +216,12 @@ export async function installThemeFromUrl(url: string, options: ThemeInstallOpti
 }
 
 /** Peek at the bundled zip's manifest without committing to OPFS. Used to
- *  decide whether the shipped builtin version is newer than what's installed. */
+ *  decide whether the shipped builtin version is newer than what's installed.
+ *  Bypasses browser cache so a post-deploy bump is always seen. */
 async function peekBundledThemeVersion(url: string): Promise<string | null> {
     try {
-        const res = await fetch(url);
-        if (!res.ok) return null;
-        const buffer = await res.arrayBuffer();
+        const buffer = await fetchBuiltinZip(url);
+        if (!buffer) return null;
         const zip = await JSZip.loadAsync(buffer);
         const root = stripCommonPrefix(zip, 'theme.manifest.json');
         const entry = root.file('theme.manifest.json');
@@ -221,12 +239,16 @@ export async function installBuiltinThemesIfMissing(builtinIds: string[]): Promi
         const url = `${base}/builtin-themes/${id}.zip`;
         const existing = await storage.getThemeManifest(id).catch(() => null);
         if (existing) {
-            // Re-install if the bundled builtin ships a different version.
             const bundled = await peekBundledThemeVersion(url);
             if (!bundled || bundled === existing.version) continue;
         }
         try {
-            await installThemeFromUrl(url);
+            const buffer = await fetchBuiltinZip(url);
+            if (!buffer) {
+                console.warn(`[Pasmello] builtin theme "${id}" fetch returned empty`);
+                continue;
+            }
+            await installThemeFromZip(buffer);
             installed.push(id);
         } catch (err) {
             console.warn(`[Pasmello] failed to install builtin theme "${id}"`, err);
