@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
+    import { base } from '$app/paths';
     import ToolFrame from '$lib/components/tools/ToolFrame.svelte';
     import { workspaceState } from '$lib/state/workspace.svelte';
     import { toolsState } from '$lib/state/tools.svelte';
@@ -68,7 +69,7 @@
     {:else}
         <div class="empty-state">
             <p>No tools in this workspace yet.</p>
-            <p class="hint">Go to <a href="/tools">Tools</a> to add your first tool.</p>
+            <p class="hint">Go to <a href="{base}/tools">Tools</a> to add your first tool.</p>
         </div>
     {/if}
 </div>

@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
+    import { base } from '$app/paths';
     import { pluginSettings } from '$lib/state/plugin-settings.svelte';
 
     interface Props {
@@ -56,23 +57,23 @@
 
 <div class="shell">
     <nav class="floating-bar" class:hidden={!barVisible}>
-        <a href="/" class="bar-item" class:active={currentView === 'workspace'}>
+        <a href="{base}/" class="bar-item" class:active={currentView === 'workspace'}>
             <span class="bar-icon">&#9633;</span>
             <span class="bar-label">Workspace</span>
         </a>
-        <a href="/tools" class="bar-item" class:active={currentView === 'tools'}>
+        <a href="{base}/tools" class="bar-item" class:active={currentView === 'tools'}>
             <span class="bar-icon">&#128295;</span>
             <span class="bar-label">Tools</span>
         </a>
-        <a href="/workflows" class="bar-item" class:active={currentView === 'workflows'}>
+        <a href="{base}/workflows" class="bar-item" class:active={currentView === 'workflows'}>
             <span class="bar-icon">&#8644;</span>
             <span class="bar-label">Workflows</span>
         </a>
-        <a href="/themes" class="bar-item" class:active={currentView === 'themes'}>
+        <a href="{base}/themes" class="bar-item" class:active={currentView === 'themes'}>
             <span class="bar-icon">&#127912;</span>
             <span class="bar-label">Themes</span>
         </a>
-        <a href="/settings" class="bar-item" class:active={currentView === 'settings'}>
+        <a href="{base}/settings" class="bar-item" class:active={currentView === 'settings'}>
             <span class="bar-icon">&#9881;</span>
             <span class="bar-label">Settings</span>
         </a>

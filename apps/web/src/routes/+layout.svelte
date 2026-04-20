@@ -3,6 +3,7 @@
     import '$lib/theme/themes/index';
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
+    import { base } from '$app/paths';
     import { bridgeManager } from '$lib/sandbox/bridge.svelte';
     import { workspaceState } from '$lib/state/workspace.svelte';
     import { pluginSettings } from '$lib/state/plugin-settings.svelte';
@@ -13,14 +14,15 @@
 
     let { children } = $props();
 
-    let currentView = $derived(
-        $page.url.pathname === '/' ? 'workspace' as const :
-        $page.url.pathname.startsWith('/tools') ? 'tools' as const :
-        $page.url.pathname.startsWith('/workflows') ? 'workflows' as const :
-        $page.url.pathname.startsWith('/themes') ? 'themes' as const :
-        $page.url.pathname.startsWith('/settings') ? 'settings' as const :
-        'workspace' as const
-    );
+    let currentView = $derived.by(() => {
+        const path = $page.url.pathname.slice(base.length) || '/';
+        if (path === '/') return 'workspace' as const;
+        if (path.startsWith('/tools')) return 'tools' as const;
+        if (path.startsWith('/workflows')) return 'workflows' as const;
+        if (path.startsWith('/themes')) return 'themes' as const;
+        if (path.startsWith('/settings')) return 'settings' as const;
+        return 'workspace' as const;
+    });
 
     // Defer shell swap while on settings page.
     // Tokens (colors/fonts) update immediately, but the shell layout
