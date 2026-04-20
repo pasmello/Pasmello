@@ -46,7 +46,7 @@
     let cols = $derived(workspaceState.current?.layout.columns ?? 12);
 
     let active = $derived(themeRegistry.active);
-    let workspaceLayer = $derived(active?.kind === 'iframe' ? active.manifest.layers?.workspace : undefined);
+    let workspaceLayer = $derived(active?.manifest.layers?.workspace);
 
     // Emit layout changes to the workspace layer so it can re-render tile decorations.
     $effect(() => {

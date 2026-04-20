@@ -2,5 +2,6 @@ packages:
   - "apps/web"
   - "packages/*"
   - "tools/builtin/*"
+  - "themes/builtin/*"
 onlyBuiltDependencies:
   - esbuild

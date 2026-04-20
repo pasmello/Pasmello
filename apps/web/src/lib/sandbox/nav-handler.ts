@@ -1,6 +1,7 @@
 import type { RequestHandler } from './host-bridge.js';
 import { goto } from '$app/navigation';
 import { base } from '$app/paths';
+import { pluginSettings } from '$lib/state/plugin-settings.svelte';
 
 const ROUTES = {
     workspace: '/',
@@ -38,6 +39,21 @@ export function createChromeResizeHandler(
             return { ok: false };
         }
         onResize(pluginId, Math.round(size));
+        return { ok: true };
+    };
+}
+
+/** Chrome theme → host color scheme change. `toggle` flips the current value. */
+export function createColorSchemeHandler(): RequestHandler {
+    return async (_pluginId, data) => {
+        const { scheme } = (data ?? {}) as { scheme?: unknown };
+        if (scheme === 'toggle' || scheme === undefined) {
+            pluginSettings.toggleColorScheme();
+        } else if (scheme === 'light' || scheme === 'dark') {
+            pluginSettings.setColorScheme(scheme);
+        } else {
+            return { ok: false };
+        }
         return { ok: true };
     };
 }

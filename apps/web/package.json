@@ -10,7 +10,8 @@
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"bundle:builtins": "node scripts/bundle-builtins.mjs"
+		"bundle:builtins": "node scripts/bundle-builtins.mjs",
+		"bundle:builtin-themes": "node scripts/bundle-builtin-themes.mjs"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^7.0.0",

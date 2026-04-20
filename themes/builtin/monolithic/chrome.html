@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pasmello — Monolithic</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%;
+            height: 100%;
+            background-color: var(--pm-bg-secondary);
+            font-family: var(--pm-font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+            color: var(--pm-text-primary);
+            overflow: hidden;
+        }
+        .sidebar {
+            width: 100%;
+            height: 100%;
+            border-right: 1px solid var(--pm-border-subtle);
+            display: flex;
+            flex-direction: column;
+            transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .sidebar-header {
+            padding: var(--pm-space-md, 16px);
+            border-bottom: 1px solid var(--pm-border-subtle);
+            min-height: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        .logo, .logo-icon {
+            font-size: var(--pm-font-size-lg, 1.125rem);
+            font-weight: 700;
+            color: var(--pm-accent);
+        }
+        .logo-icon { display: none; text-align: center; }
+        .workspace-name {
+            font-size: var(--pm-font-size-xs, 0.75rem);
+            color: var(--pm-text-tertiary);
+            margin-top: 4px;
+        }
+        .sidebar-nav {
+            flex: 1;
+            padding: var(--pm-space-sm, 8px);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: var(--pm-space-sm, 8px);
+            padding: var(--pm-space-sm, 8px) var(--pm-space-md, 16px);
+            border-radius: var(--pm-radius-sm, 6px);
+            color: var(--pm-text-secondary);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: var(--pm-font-size-sm, 0.875rem);
+            font-family: inherit;
+            text-align: left;
+            white-space: nowrap;
+            overflow: hidden;
+            transition: background-color 150ms ease, color 150ms ease;
+        }
+        .nav-item:hover {
+            background-color: var(--pm-bg-tertiary);
+            color: var(--pm-text-primary);
+        }
+        .nav-item.active {
+            background-color: var(--pm-accent-subtle);
+            color: var(--pm-accent);
+        }
+        .nav-icon {
+            font-size: var(--pm-font-size-lg, 1.125rem);
+            width: 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .nav-text { overflow: hidden; white-space: nowrap; }
+        .sidebar-footer {
+            padding: var(--pm-space-md, 16px);
+            border-top: 1px solid var(--pm-border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--pm-space-xs, 4px);
+        }
+        button.btn {
+            background: none;
+            border: 1px solid var(--pm-border);
+            border-radius: var(--pm-radius-sm, 6px);
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            color: inherit;
+            transition: border-color 150ms ease, color 150ms ease;
+        }
+        button.btn:hover {
+            color: var(--pm-text-primary);
+            border-color: var(--pm-accent);
+        }
+        body.collapsed .logo, body.collapsed .workspace-name { display: none; }
+        body.collapsed .logo-icon { display: flex; justify-content: center; }
+        body.collapsed .nav-item { padding: var(--pm-space-sm, 8px); justify-content: center; }
+        body.collapsed .nav-text { width: 0; opacity: 0; }
+        body.collapsed .sidebar-footer { flex-direction: column; padding: var(--pm-space-sm, 8px); }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1 class="logo">Pasmello</h1>
+            <span class="logo-icon">P</span>
+            <p class="workspace-name" id="workspace-name">—</p>
+        </div>
+        <nav class="sidebar-nav">
+            <button class="nav-item" data-view="workspace">
+                <span class="nav-icon">&#9633;</span><span class="nav-text">Workspace</span>
+            </button>
+            <button class="nav-item" data-view="tools">
+                <span class="nav-icon">&#128295;</span><span class="nav-text">Tools</span>
+            </button>
+            <button class="nav-item" data-view="workflows">
+                <span class="nav-icon">&#8644;</span><span class="nav-text">Workflows</span>
+            </button>
+            <button class="nav-item" data-view="themes">
+                <span class="nav-icon">&#127912;</span><span class="nav-text">Themes</span>
+            </button>
+            <button class="nav-item" data-view="settings">
+                <span class="nav-icon">&#9881;</span><span class="nav-text">Settings</span>
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <button class="btn" id="theme-toggle">🌙</button>
+            <button class="btn" id="collapse-toggle">◀</button>
+        </div>
+    </aside>
+    <script type="module" src="./src/main.ts"></script>
+</body>
+</html>

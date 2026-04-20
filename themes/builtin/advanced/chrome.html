@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pasmello — Advanced</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%;
+            height: 100%;
+            background-color: var(--pm-bg-secondary);
+            font-family: var(--pm-font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+            color: var(--pm-text-primary);
+        }
+        .sidebar {
+            width: 100%;
+            height: 100%;
+            border-right: 1px solid var(--pm-border-subtle);
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-header {
+            padding: var(--pm-space-md, 16px);
+            border-bottom: 1px solid var(--pm-border-subtle);
+        }
+        .logo {
+            font-size: var(--pm-font-size-lg, 1.125rem);
+            font-weight: 700;
+            color: var(--pm-accent);
+        }
+        .workspace-name {
+            font-size: var(--pm-font-size-xs, 0.75rem);
+            color: var(--pm-text-tertiary);
+            margin-top: 4px;
+        }
+        .sidebar-nav {
+            flex: 1;
+            padding: var(--pm-space-sm, 8px);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: var(--pm-space-sm, 8px);
+            padding: var(--pm-space-sm, 8px) var(--pm-space-md, 16px);
+            border-radius: var(--pm-radius-sm, 6px);
+            color: var(--pm-text-secondary);
+            cursor: pointer;
+            font-size: var(--pm-font-size-sm, 0.875rem);
+            text-decoration: none;
+            transition: background-color 150ms ease, color 150ms ease;
+            border: none;
+            background: transparent;
+            text-align: left;
+            width: 100%;
+            font-family: inherit;
+        }
+        .nav-item:hover {
+            background-color: var(--pm-bg-tertiary);
+            color: var(--pm-text-primary);
+        }
+        .nav-item.active {
+            background-color: var(--pm-accent-subtle);
+            color: var(--pm-accent);
+        }
+        .nav-icon {
+            font-size: var(--pm-font-size-lg, 1.125rem);
+            width: 20px;
+            text-align: center;
+        }
+        .sidebar-footer {
+            padding: var(--pm-space-md, 16px);
+            border-top: 1px solid var(--pm-border-subtle);
+        }
+        .theme-toggle {
+            background: none;
+            border: 1px solid var(--pm-border);
+            border-radius: var(--pm-radius-sm, 6px);
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            color: inherit;
+        }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1 class="logo">Pasmello</h1>
+            <p class="workspace-name" id="workspace-name">—</p>
+        </div>
+        <nav class="sidebar-nav">
+            <button class="nav-item" data-view="workspace">
+                <span class="nav-icon">&#9633;</span>
+                <span>Workspace</span>
+            </button>
+            <button class="nav-item" data-view="tools">
+                <span class="nav-icon">&#128295;</span>
+                <span>Tools</span>
+            </button>
+            <button class="nav-item" data-view="workflows">
+                <span class="nav-icon">&#8644;</span>
+                <span>Workflows</span>
+            </button>
+            <button class="nav-item" data-view="themes">
+                <span class="nav-icon">&#127912;</span>
+                <span>Themes</span>
+            </button>
+            <button class="nav-item" data-view="settings">
+                <span class="nav-icon">&#9881;</span>
+                <span>Settings</span>
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <button class="theme-toggle" id="theme-toggle">🌙</button>
+        </div>
+    </aside>
+    <script type="module" src="./src/main.ts"></script>
+</body>
+</html>

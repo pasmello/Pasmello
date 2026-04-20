@@ -73,4 +73,4 @@ function captureLayer(): Promise<ThemeLayerKind> {
 
 export { Tokens, ChromeAPI, WorkspaceAPI, AmbientAPI };
 export type { PlaceArgs, DragEvent, LayoutTool } from './workspace.js';
-export type { CurrentView } from './chrome.js';
+export type { CurrentView, ColorScheme } from './chrome.js';

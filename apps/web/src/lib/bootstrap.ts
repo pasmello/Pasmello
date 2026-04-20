@@ -1,8 +1,10 @@
 import { storage } from '$lib/storage';
-import { installBuiltinsIfMissing } from '$lib/tools/install';
+import { installBuiltinsIfMissing, installBuiltinThemesIfMissing } from '$lib/tools/install';
 import { defaultWorkspaceSettings } from '@pasmello/shared';
+import { themeRegistry } from '$lib/theme/registry.svelte';
 
 const BUILTIN_TOOL_IDS = ['clock'];
+const BUILTIN_THEME_IDS = ['advanced', 'monolithic', 'cute'];
 
 /**
  * First-run bootstrap: ensures storage is initialized, builtins are installed,
@@ -17,6 +19,8 @@ export async function bootstrapApp(): Promise<void> {
     if (newlyInstalled.length > 0) {
         await seedDefaultWorkspaceWithBuiltins(newlyInstalled);
     }
+    await installBuiltinThemesIfMissing(BUILTIN_THEME_IDS);
+    await themeRegistry.loadFromStorage();
 }
 
 async function migrateLegacyThemeSettings(): Promise<void> {

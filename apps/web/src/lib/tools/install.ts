@@ -1,5 +1,6 @@
 import JSZip from 'jszip';
-import type { ToolManifest } from '@pasmello/shared';
+import type { ToolManifest, ThemeManifest } from '@pasmello/shared';
+import { base } from '$app/paths';
 import { storage, isValidPathSegment, type ToolFile } from '$lib/storage';
 import { eventBus } from '$lib/workflow/triggers';
 
@@ -96,10 +97,91 @@ export async function installBuiltinsIfMissing(builtinIds: string[]): Promise<st
         const existing = await storage.getToolManifest(id).catch(() => null);
         if (existing) continue;
         try {
-            await installFromUrl(`/builtins/${id}.zip`);
+            await installFromUrl(`${base}/builtins/${id}.zip`);
             installed.push(id);
         } catch (err) {
             console.warn(`[Pasmello] failed to install builtin "${id}"`, err);
+        }
+    }
+    return installed;
+}
+
+/** Install a theme from a zip. Mirrors installFromZip for tools. */
+export async function installThemeFromZip(
+    input: Blob | ArrayBuffer | Uint8Array,
+    options: InstallOptions = {},
+): Promise<ThemeManifest> {
+    const zip = await JSZip.loadAsync(input as never);
+
+    const root = stripCommonPrefix(zip, 'theme.manifest.json');
+    const manifestEntry = root.file('theme.manifest.json');
+    if (!manifestEntry) {
+        throw new ToolInstallError('zip is missing theme.manifest.json at the root');
+    }
+
+    let manifest: ThemeManifest;
+    try {
+        manifest = JSON.parse(await manifestEntry.async('string')) as ThemeManifest;
+    } catch {
+        throw new ToolInstallError('theme.manifest.json is not valid JSON');
+    }
+
+    if (!manifest.id || !isValidPathSegment(manifest.id)) {
+        throw new ToolInstallError('manifest.id is missing or invalid');
+    }
+    if (!manifest.name) throw new ToolInstallError('manifest.name is required');
+    if (!manifest.version) throw new ToolInstallError('manifest.version is required');
+    if (!manifest.layers?.chrome?.entry) {
+        throw new ToolInstallError('manifest.layers.chrome.entry is required');
+    }
+
+    if (options.consentProvider) {
+        // The consent provider for themes is separate (different manifest shape).
+        // Reuse only when the caller opts in via installThemeFromZip; the
+        // signature stays ToolManifest-based in InstallOptions, so a theme caller
+        // passes an adapter. For now, skip consent for themes — branch 3 adds it.
+    }
+
+    const files: ToolFile[] = [];
+    const entries: Promise<void>[] = [];
+    root.forEach((relPath, entry) => {
+        if (entry.dir) return;
+        const segments = relPath.split('/').filter(Boolean);
+        for (const seg of segments) {
+            if (!isValidPathSegment(seg)) {
+                throw new ToolInstallError(`unsafe path in zip: ${relPath}`);
+            }
+        }
+        entries.push(
+            entry.async('uint8array').then((data) => {
+                files.push({ path: segments.join('/'), data });
+            }),
+        );
+    });
+    await Promise.all(entries);
+
+    await storage.installTheme(manifest.id, files);
+    eventBus.emit('theme:installed', { themeId: manifest.id, version: manifest.version });
+    return manifest;
+}
+
+export async function installThemeFromUrl(url: string, options: InstallOptions = {}): Promise<ThemeManifest> {
+    const res = await fetch(url);
+    if (!res.ok) throw new ToolInstallError(`download failed: HTTP ${res.status}`);
+    const buffer = await res.arrayBuffer();
+    return installThemeFromZip(buffer, options);
+}
+
+export async function installBuiltinThemesIfMissing(builtinIds: string[]): Promise<string[]> {
+    const installed: string[] = [];
+    for (const id of builtinIds) {
+        const existing = await storage.getThemeManifest(id).catch(() => null);
+        if (existing) continue;
+        try {
+            await installThemeFromUrl(`${base}/builtin-themes/${id}.zip`);
+            installed.push(id);
+        } catch (err) {
+            console.warn(`[Pasmello] failed to install builtin theme "${id}"`, err);
         }
     }
     return installed;
@@ -109,7 +191,7 @@ export async function installBuiltinsIfMissing(builtinIds: string[]): Promise<st
  * If every entry in the zip lives under the same top-level directory
  * (common when zipping a folder), descend into it. Otherwise return the root.
  */
-function stripCommonPrefix(zip: JSZip): JSZip {
+function stripCommonPrefix(zip: JSZip, manifestFile = 'tool.manifest.json'): JSZip {
     const topLevel = new Set<string>();
     zip.forEach((relPath) => {
         const head = relPath.split('/')[0];
@@ -117,6 +199,6 @@ function stripCommonPrefix(zip: JSZip): JSZip {
     });
     if (topLevel.size !== 1) return zip;
     const only = [...topLevel][0];
-    if (!zip.folder(only)?.file('tool.manifest.json')) return zip;
+    if (!zip.folder(only)?.file(manifestFile)) return zip;
     return zip.folder(only)!;
 }

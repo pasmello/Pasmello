@@ -3,7 +3,7 @@ import { createStorageHandlers } from './storage-handler.js';
 import { createHttpHandler } from './http-handler.js';
 import { createThemeHandler } from './theme-handler.js';
 import { createSettingsHandlers } from './settings-handler.js';
-import { createNavHandler, createChromeResizeHandler } from './nav-handler.js';
+import { createNavHandler, createChromeResizeHandler, createColorSchemeHandler } from './nav-handler.js';
 import { createLayoutHandler, type PlaceCommand } from './layout-handler.js';
 
 export type { PlaceCommand };
@@ -56,9 +56,9 @@ class BridgeManager {
         }
     }
 
-    /** Push the current view + workspace name to the chrome layer. */
-    broadcastNav(currentView: string, workspaceName: string) {
-        this.themeBridge?.broadcast('nav:update', { currentView, workspaceName });
+    /** Push the current view + workspace name + color scheme to the chrome layer. */
+    broadcastNav(currentView: string, workspaceName: string, colorScheme: 'light' | 'dark') {
+        this.themeBridge?.broadcast('nav:update', { currentView, workspaceName, colorScheme });
     }
 
     /** Push route changes to the ambient layer. */
@@ -100,6 +100,7 @@ class BridgeManager {
 
         if (kind === 'theme') {
             bridge.handle('ui:navigate', createNavHandler());
+            bridge.handle('ui:color-scheme', createColorSchemeHandler());
             bridge.handle('chrome:resize', createChromeResizeHandler((_pluginId, size) => {
                 this.chromeSizeOverride = size;
             }));

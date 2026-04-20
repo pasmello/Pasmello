@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite';
-import { inlineAssets } from '../../shared/vite-inline-assets';
+import { inlineAssets } from '../../../tools/shared/vite-inline-assets';
 
 export default defineConfig({
     base: './',
@@ -8,7 +8,7 @@ export default defineConfig({
         outDir: 'dist',
         emptyOutDir: true,
         rollupOptions: {
-            input: 'index.html',
+            input: 'chrome.html',
         },
     },
 });

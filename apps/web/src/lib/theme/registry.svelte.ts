@@ -1,20 +1,15 @@
 import type { ThemeManifest } from '@pasmello/shared';
 import { pluginSettings } from '$lib/state/plugin-settings.svelte';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyComponent = any;
+import { storage } from '$lib/storage';
 
 export type ThemeSource = 'builtin' | 'installed';
-export type ThemeKind = 'svelte' | 'iframe';
 
 export interface ThemeDefinition {
     manifest: ThemeManifest;
     source: ThemeSource;
-    /** 'svelte' during Phase 2 rollout (builtins), 'iframe' for OPFS-hosted themes. */
-    kind: ThemeKind;
-    /** Populated when kind === 'svelte'. */
-    component?: AnyComponent;
 }
+
+const BUILTIN_THEME_IDS = new Set(['advanced', 'monolithic', 'cute']);
 
 class ThemeRegistry {
     private themes = $state(new Map<string, ThemeDefinition>());
@@ -37,14 +32,6 @@ class ThemeRegistry {
         return this.themes.get(pluginSettings.activeThemeId);
     }
 
-    get activeComponent(): AnyComponent {
-        if (this.active?.kind === 'svelte') return this.active.component;
-        for (const def of this.themes.values()) {
-            if (def.kind === 'svelte') return def.component;
-        }
-        return undefined;
-    }
-
     get activeManifest(): ThemeManifest | undefined {
         return this.active?.manifest;
     }
@@ -55,6 +42,23 @@ class ThemeRegistry {
 
     get(id: string): ThemeDefinition | undefined {
         return this.themes.get(id);
+    }
+
+    /** Re-scan OPFS and register every installed theme. Call after bootstrap
+     *  installs builtin themes. */
+    async loadFromStorage(): Promise<void> {
+        try {
+            const manifests = await storage.listThemes();
+            for (const manifest of manifests) {
+                if (!manifest.layers) continue;
+                this.register({
+                    manifest,
+                    source: BUILTIN_THEME_IDS.has(manifest.id) ? 'builtin' : 'installed',
+                });
+            }
+        } catch (err) {
+            console.warn('[Pasmello] failed to load themes from storage', err);
+        }
     }
 }
 

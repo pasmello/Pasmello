@@ -1,6 +1,5 @@
 <script lang="ts">
     import '../app.css';
-    import '$lib/theme/themes/index';
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
     import { base } from '$app/paths';
@@ -43,8 +42,7 @@
     });
 
     let activeTheme = $derived(themeRegistry.all.find(t => t.manifest.id === renderedThemeId) ?? themeRegistry.active);
-    let ThemeShell = $derived(activeTheme?.kind === 'svelte' ? activeTheme.component : null);
-    let iframeLayers = $derived(activeTheme?.kind === 'iframe' ? activeTheme.manifest.layers : null);
+    let iframeLayers = $derived(activeTheme?.manifest.layers ?? null);
 
     let transitioning = $state(false);
     let prevRendered = $state(renderedThemeId);
@@ -85,7 +83,7 @@
 
     // Push nav state to chrome layer whenever it changes
     $effect(() => {
-        bridgeManager.broadcastNav(currentView, workspaceState.currentName);
+        bridgeManager.broadcastNav(currentView, workspaceState.currentName, pluginSettings.colorScheme);
     });
 
     // Push route change to ambient layer
@@ -108,8 +106,8 @@
     <div class="theme-transition-overlay"></div>
 {/if}
 
-{#if bootstrapped}
-    {#if iframeLayers && bridgeManager.themeBridge}
+{#if bootstrapped && iframeLayers && bridgeManager.themeBridge}
+    {#key renderedThemeId}
         {#if iframeLayers.ambient}
             <AmbientLayer
                 themeId={renderedThemeId}
@@ -122,16 +120,10 @@
             chrome={iframeLayers.chrome}
             bridge={bridgeManager.themeBridge}
         />
-        <main class="iframe-theme-content" style:margin-left={contentMarginLeft} style:margin-top={contentMarginTop}>
-            {@render children()}
-        </main>
-    {:else if ThemeShell}
-        {#key renderedThemeId}
-            <ThemeShell {currentView}>
-                {@render children()}
-            </ThemeShell>
-        {/key}
-    {/if}
+    {/key}
+    <main class="iframe-theme-content" style:margin-left={contentMarginLeft} style:margin-top={contentMarginTop}>
+        {@render children()}
+    </main>
 {:else}
     <div class="boot-loading">Loading…</div>
 {/if}
