@@ -71,6 +71,4 @@ This repository is **Tier 1 (OSS)** only. Higher tiers extend the same Storage /
 
 ## License
 
-Dual-licensed. See [LICENSING.md](LICENSING.md) for the breakdown:
-- **Core platform** (`apps/web/`): AGPL-3.0
-- **SDK, shared types, built-in tools** (`packages/`, `tools/builtin/`): Apache 2.0
+[MIT](LICENSE). See [LICENSING.md](LICENSING.md) for details.
