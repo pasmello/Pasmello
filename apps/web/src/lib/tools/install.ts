@@ -94,15 +94,37 @@ export async function installFromUrl(url: string, options: InstallOptions = {}):
     return installFromZip(buffer, options);
 }
 
+/** Peek at a bundled tool zip's manifest version without writing to OPFS. */
+async function peekBundledToolVersion(url: string): Promise<string | null> {
+    try {
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const buffer = await res.arrayBuffer();
+        const zip = await JSZip.loadAsync(buffer);
+        const root = stripCommonPrefix(zip);
+        const entry = root.file('tool.manifest.json');
+        if (!entry) return null;
+        const manifest = JSON.parse(await entry.async('string')) as ToolManifest;
+        return manifest.version ?? null;
+    } catch {
+        return null;
+    }
+}
+
 /** Install builtins bundled under apps/web/static/builtins/. Returns the ids
- * actually installed during this call (skips ones that were already present). */
+ * actually installed during this call. Reinstalls when the shipped version
+ * differs from what's already in OPFS. */
 export async function installBuiltinsIfMissing(builtinIds: string[]): Promise<string[]> {
     const installed: string[] = [];
     for (const id of builtinIds) {
+        const url = `${base}/builtins/${id}.zip`;
         const existing = await storage.getToolManifest(id).catch(() => null);
-        if (existing) continue;
+        if (existing) {
+            const bundled = await peekBundledToolVersion(url);
+            if (!bundled || bundled === existing.version) continue;
+        }
         try {
-            await installFromUrl(`${base}/builtins/${id}.zip`);
+            await installFromUrl(url);
             installed.push(id);
         } catch (err) {
             console.warn(`[Pasmello] failed to install builtin "${id}"`, err);

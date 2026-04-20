@@ -9,28 +9,30 @@
     import { themeRegistry } from '$lib/theme/registry.svelte';
     import type { LayoutItem } from '@pasmello/shared';
 
-    let gridItems = $state<Array<{ id: string; toolId: string; x: number; y: number; w: number; h: number }>>([]);
-
     onMount(async () => {
         await Promise.all([
             workspaceState.loadWorkspace(workspaceState.currentName),
             toolsState.loadTools(),
         ]);
-        syncGridItems();
     });
 
-    function syncGridItems() {
+    let gridItems = $derived.by(() => {
         const ws = workspaceState.current;
-        if (!ws) return;
-        gridItems = ws.layout.items.map((item: LayoutItem) => ({
-            id: item.toolId,
-            toolId: item.toolId,
-            x: item.x,
-            y: item.y,
-            w: item.w,
-            h: item.h,
-        }));
-    }
+        if (!ws) return [] as Array<{ id: string; toolId: string; x: number; y: number; w: number; h: number }>;
+        const widgetIds = new Set(
+            toolsState.installed.filter((t) => t.widget).map((t) => t.id),
+        );
+        return ws.layout.items
+            .filter((item: LayoutItem) => widgetIds.has(item.toolId))
+            .map((item: LayoutItem) => ({
+                id: item.toolId,
+                toolId: item.toolId,
+                x: item.x,
+                y: item.y,
+                w: item.w,
+                h: item.h,
+            }));
+    });
 
     // Apply any layout overrides the active workspace-layer theme has sent.
     let placedItems = $derived.by(() => {

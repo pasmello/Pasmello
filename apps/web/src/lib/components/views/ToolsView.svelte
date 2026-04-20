@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { toolsState } from '$lib/state/tools.svelte';
-    import { workspaceState } from '$lib/state/workspace.svelte';
+    import { storage } from '$lib/storage';
     import {
         installFromZip,
         installFromUrl,
@@ -34,38 +34,12 @@
 
     onMount(async () => {
         await toolsState.loadTools();
-        await workspaceState.loadWorkspace(workspaceState.currentName);
     });
 
-    function isInWorkspace(toolId: string): boolean {
-        return workspaceState.current?.tools.some(t => t.toolName === toolId) ?? false;
-    }
-
-    async function addToWorkspace(tool: ToolManifest) {
-        const ws = workspaceState.current;
-        if (!ws || isInWorkspace(tool.id)) return;
-
-        ws.tools = [...ws.tools, { id: `${tool.id}-${Date.now()}`, toolName: tool.id }];
-
-        const maxY = ws.layout.items.reduce((max, item) => Math.max(max, item.y + item.h), 0);
-        ws.layout.items = [...ws.layout.items, {
-            toolId: tool.id,
-            x: 0,
-            y: maxY,
-            w: 6,
-            h: 4,
-        }];
-
-        await workspaceState.updateWorkspace(ws);
-    }
-
-    async function removeFromWorkspace(toolId: string) {
-        const ws = workspaceState.current;
-        if (!ws) return;
-
-        ws.tools = ws.tools.filter(t => t.toolName !== toolId);
-        ws.layout.items = ws.layout.items.filter(item => item.toolId !== toolId);
-        await workspaceState.updateWorkspace(ws);
+    async function uninstall(toolId: string) {
+        if (!confirm(`Uninstall "${toolId}"? It will be removed from every workspace.`)) return;
+        await storage.removeTool(toolId);
+        await toolsState.loadTools();
     }
 
     async function runInstall(action: () => Promise<ToolManifest>) {
@@ -186,18 +160,15 @@
                     <div class="tool-info">
                         <h3 class="tool-name">{tool.name}</h3>
                         <span class="tool-version">v{tool.version}</span>
+                        <span class="tool-kind" data-kind={tool.widget ? 'widget' : 'workflow'}>
+                            {tool.widget ? 'Widget' : 'Workflow only'}
+                        </span>
                     </div>
                     <p class="tool-description">{tool.description}</p>
                     <div class="tool-actions">
-                        {#if isInWorkspace(tool.id)}
-                            <button class="btn-remove" onclick={() => removeFromWorkspace(tool.id)}>
-                                Remove from workspace
-                            </button>
-                        {:else}
-                            <button class="btn-add" onclick={() => addToWorkspace(tool)}>
-                                Add to workspace
-                            </button>
-                        {/if}
+                        <button class="btn-remove" onclick={() => uninstall(tool.id)}>
+                            Uninstall
+                        </button>
                     </div>
                 </div>
             {/each}
@@ -358,6 +329,20 @@
         font-family: var(--pm-font-mono);
     }
 
+    .tool-kind {
+        margin-left: auto;
+        font-size: var(--pm-font-size-xs);
+        padding: 2px 8px;
+        border-radius: var(--pm-radius-full);
+        background-color: var(--pm-bg-tertiary);
+        color: var(--pm-text-secondary);
+    }
+
+    .tool-kind[data-kind='widget'] {
+        background-color: var(--pm-accent-subtle);
+        color: var(--pm-accent);
+    }
+
     .tool-description {
         font-size: var(--pm-font-size-sm);
         color: var(--pm-text-secondary);
@@ -367,16 +352,6 @@
     .tool-actions {
         display: flex;
         gap: var(--pm-space-sm);
-    }
-
-    .btn-add {
-        padding: var(--pm-space-xs) var(--pm-space-sm);
-        background-color: var(--pm-accent);
-        color: var(--pm-text-inverse);
-        border: none;
-        border-radius: var(--pm-radius-sm);
-        cursor: pointer;
-        font-size: var(--pm-font-size-xs);
     }
 
     .btn-remove {

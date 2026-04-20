@@ -1,7 +1,7 @@
 {
     "id": "clock",
     "name": "Clock",
-    "version": "0.0.1",
+    "version": "0.1.0",
     "description": "A simple clock widget showing current time and date",
     "entry": "index.html",
     "permissions": {
@@ -12,5 +12,10 @@
         "camera": false,
         "geolocation": false
     },
-    "actions": {}
+    "actions": {},
+    "widget": {
+        "minSize":     { "w": 2, "h": 2 },
+        "maxSize":     { "w": 8, "h": 8 },
+        "defaultSize": { "w": 4, "h": 4 }
+    }
 }
