@@ -1,5 +1,8 @@
 export interface Workspace {
     name: string;
+    /** Home workspace flag. Exactly one workspace should have home=true; the
+     *  app redirects the root route to this workspace on fresh loads. */
+    home: boolean;
     tools: WorkspaceTool[];
     layout: Layout;
     settings: WorkspaceSettings;

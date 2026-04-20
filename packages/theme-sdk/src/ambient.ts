@@ -8,7 +8,7 @@ type RouteListener = (view: CurrentView) => void;
  * ambient layer. Read-only — ambient layers can't send events to the host.
  */
 export class AmbientAPI {
-    private _currentRoute: CurrentView = 'workspace';
+    private _currentRoute: CurrentView = 'home';
     private listeners = new Set<RouteListener>();
 
     constructor(private channel: Channel) {

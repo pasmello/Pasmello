@@ -1,6 +1,6 @@
 import type { Channel } from '@pasmello/sdk';
 
-export type CurrentView = 'workspace' | 'tools' | 'themes' | 'workflows' | 'settings';
+export type CurrentView = 'home' | 'workspaces' | 'tools' | 'themes' | 'workflows' | 'settings';
 export type ColorScheme = 'light' | 'dark';
 
 type ViewListener = (view: CurrentView) => void;
@@ -12,7 +12,7 @@ type SchemeListener = (scheme: ColorScheme) => void;
  * chrome layer. Provides nav state + navigation helpers.
  */
 export class ChromeAPI {
-    private _currentView: CurrentView = 'workspace';
+    private _currentView: CurrentView = 'home';
     private _workspaceName = '';
     private _colorScheme: ColorScheme = 'dark';
     private viewListeners = new Set<ViewListener>();

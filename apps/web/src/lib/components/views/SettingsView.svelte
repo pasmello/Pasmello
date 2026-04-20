@@ -5,13 +5,10 @@
     import { themeRegistry } from '$lib/theme/registry.svelte';
     import { workspaceState } from '$lib/state/workspace.svelte';
     import { toolsState } from '$lib/state/tools.svelte';
-    import { bridgeManager } from '$lib/sandbox/bridge.svelte';
     import { downloadStorageZip, importStorageZip } from '$lib/storage/portable';
     import { getAllPluginUsage, formatBytes, type PluginUsage } from '$lib/storage/quota';
     import PluginSettingsRenderer from './PluginSettingsRenderer.svelte';
 
-    let newWorkspaceName = $state('');
-    let createError = $state<string | null>(null);
     let backupBusy = $state(false);
     let backupMessage = $state<string | null>(null);
     let importInput: HTMLInputElement;
@@ -35,22 +32,6 @@
         } finally {
             usageBusy = false;
         }
-    }
-
-    async function handleCreate() {
-        if (!newWorkspaceName.trim()) return;
-        createError = null;
-        await workspaceState.createWorkspace(newWorkspaceName.trim());
-        if (workspaceState.error) {
-            createError = workspaceState.error;
-        } else {
-            newWorkspaceName = '';
-        }
-    }
-
-    async function switchTo(name: string) {
-        await workspaceState.switchWorkspace(name);
-        bridgeManager.init(name);
     }
 
     async function handleExport() {
@@ -141,39 +122,6 @@
                 </div>
             </section>
         {/if}
-
-        <!-- Workspaces -->
-        <section class="setting-group">
-            <h3>Workspaces</h3>
-            <div class="workspace-list">
-                {#each workspaceState.workspaces as ws (ws)}
-                    <div class="workspace-item" class:active={ws === workspaceState.currentName}>
-                        <span class="workspace-name">{ws}</span>
-                        {#if ws === workspaceState.currentName}
-                            <span class="workspace-badge">current</span>
-                        {:else}
-                            <button class="btn-switch" onclick={() => switchTo(ws)}>Switch</button>
-                        {/if}
-                        {#if ws !== 'default'}
-                            <button class="btn-delete" onclick={() => workspaceState.deleteWorkspace(ws)}>Delete</button>
-                        {/if}
-                    </div>
-                {/each}
-            </div>
-
-            <form class="create-form" onsubmit={(e) => { e.preventDefault(); handleCreate(); }}>
-                <input
-                    type="text"
-                    bind:value={newWorkspaceName}
-                    placeholder="New workspace name..."
-                    class="create-input"
-                />
-                <button type="submit" class="create-btn" disabled={!newWorkspaceName.trim()}>Create</button>
-            </form>
-            {#if createError}
-                <p class="create-error">{createError}</p>
-            {/if}
-        </section>
 
         <!-- Storage usage -->
         <section class="setting-group">
@@ -405,113 +353,6 @@
     .setting-control:hover {
         background-color: var(--pm-accent-subtle);
         border-color: var(--pm-accent);
-    }
-
-    /* Workspaces */
-    .workspace-list {
-        display: flex;
-        flex-direction: column;
-        gap: var(--pm-space-xs);
-        margin-bottom: var(--pm-space-md);
-    }
-
-    .workspace-item {
-        display: flex;
-        align-items: center;
-        gap: var(--pm-space-sm);
-        padding: var(--pm-space-sm) var(--pm-space-md);
-        border-radius: var(--pm-radius-sm);
-        background-color: var(--pm-bg-surface);
-        border: 1px solid var(--pm-border-subtle);
-    }
-
-    .workspace-item.active {
-        border-color: var(--pm-accent);
-        background-color: var(--pm-accent-subtle);
-    }
-
-    .workspace-name {
-        flex: 1;
-        font-size: var(--pm-font-size-sm);
-        font-weight: 500;
-    }
-
-    .workspace-badge {
-        font-size: var(--pm-font-size-xs);
-        color: var(--pm-accent);
-        background-color: var(--pm-bg-primary);
-        padding: 2px 8px;
-        border-radius: var(--pm-radius-full);
-    }
-
-    .btn-switch {
-        padding: 2px var(--pm-space-sm);
-        background: none;
-        border: 1px solid var(--pm-border);
-        border-radius: var(--pm-radius-sm);
-        color: var(--pm-text-secondary);
-        cursor: pointer;
-        font-size: var(--pm-font-size-xs);
-    }
-
-    .btn-switch:hover {
-        border-color: var(--pm-accent);
-        color: var(--pm-accent);
-    }
-
-    .btn-delete {
-        padding: 2px var(--pm-space-sm);
-        background: none;
-        border: 1px solid transparent;
-        border-radius: var(--pm-radius-sm);
-        color: var(--pm-text-tertiary);
-        cursor: pointer;
-        font-size: var(--pm-font-size-xs);
-    }
-
-    .btn-delete:hover {
-        color: var(--pm-status-error);
-        border-color: var(--pm-status-error);
-    }
-
-    .create-form {
-        display: flex;
-        gap: var(--pm-space-sm);
-    }
-
-    .create-input {
-        flex: 1;
-        padding: var(--pm-space-xs) var(--pm-space-sm);
-        border: 1px solid var(--pm-border);
-        border-radius: var(--pm-radius-sm);
-        font-size: var(--pm-font-size-sm);
-        background-color: var(--pm-bg-primary);
-        color: var(--pm-text-primary);
-    }
-
-    .create-input::placeholder {
-        color: var(--pm-text-tertiary);
-    }
-
-    .create-btn {
-        padding: var(--pm-space-xs) var(--pm-space-md);
-        background-color: var(--pm-accent);
-        color: var(--pm-text-inverse);
-        border: none;
-        border-radius: var(--pm-radius-sm);
-        cursor: pointer;
-        font-size: var(--pm-font-size-sm);
-    }
-
-    .create-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-
-    .create-error {
-        margin-top: var(--pm-space-xs);
-        font-size: var(--pm-font-size-xs);
-        color: var(--pm-status-error);
     }
 
     .backup-hint {

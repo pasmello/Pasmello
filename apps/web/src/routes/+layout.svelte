@@ -17,12 +17,13 @@
 
     let currentView = $derived.by(() => {
         const path = $page.url.pathname.slice(base.length) || '/';
-        if (path === '/') return 'workspace' as const;
+        if (path === '/' || path.startsWith('/home')) return 'home' as const;
         if (path.startsWith('/tools')) return 'tools' as const;
         if (path.startsWith('/workflows')) return 'workflows' as const;
         if (path.startsWith('/themes')) return 'themes' as const;
+        if (path.startsWith('/workspaces')) return 'workspaces' as const;
         if (path.startsWith('/settings')) return 'settings' as const;
-        return 'workspace' as const;
+        return 'home' as const;
     });
 
     let renderedThemeId = $state(pluginSettings.activeThemeId);
@@ -58,7 +59,7 @@
 
     onMount(async () => {
         await bootstrapApp();
-        await workspaceState.loadWorkspace(workspaceState.currentName);
+        await workspaceState.loadPreferred();
         bridgeManager.init(workspaceState.currentName);
         await triggerDispatcher.init(workspaceState.currentName);
         bootstrapped = true;

@@ -15,6 +15,7 @@ import {
 
 const DEFAULT_WORKSPACE: Workspace = {
     name: 'default',
+    home: true,
     tools: [],
     layout: { columns: 12, items: [] },
     settings: defaultWorkspaceSettings(),
@@ -62,7 +63,23 @@ export class OpfsStorage implements Storage {
         assertPathSegment(ws.name);
         await this.getDir(['workspaces', ws.name, 'data'], true);
         await this.getDir(['workspaces', ws.name, 'workflows'], true);
-        await this.writeJson(['workspaces', ws.name, 'workspace.json'], ws);
+        const normalized: Workspace = { ...ws, home: ws.home === true };
+        await this.writeJson(['workspaces', ws.name, 'workspace.json'], normalized);
+
+        // Single-home invariant: if this save sets home=true, clear it on all others.
+        if (normalized.home) {
+            const names = await this.listWorkspaces();
+            for (const otherName of names) {
+                if (otherName === ws.name) continue;
+                const other = await this.getWorkspace(otherName).catch(() => null);
+                if (other?.home) {
+                    await this.writeJson(
+                        ['workspaces', otherName, 'workspace.json'],
+                        { ...other, home: false },
+                    );
+                }
+            }
+        }
     }
 
     async deleteWorkspace(name: string): Promise<void> {

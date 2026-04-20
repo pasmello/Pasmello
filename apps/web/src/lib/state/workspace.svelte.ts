@@ -3,11 +3,35 @@ import { eventBus, triggerDispatcher } from '$lib/workflow/triggers';
 import type { Workspace } from '@pasmello/shared';
 import { defaultWorkspaceSettings } from '@pasmello/shared';
 
+const CURRENT_NAME_KEY = 'pasmello:currentWorkspace';
+
+function readPersistedCurrent(): string {
+    if (typeof localStorage === 'undefined') return 'default';
+    try {
+        return localStorage.getItem(CURRENT_NAME_KEY) || 'default';
+    } catch {
+        return 'default';
+    }
+}
+
+function persistCurrent(name: string): void {
+    if (typeof localStorage === 'undefined') return;
+    try {
+        localStorage.setItem(CURRENT_NAME_KEY, name);
+    } catch {
+        // ignore quota / unavailable storage
+    }
+}
+
 function backfillSettings(ws: Workspace): Workspace {
-    if (ws.settings && typeof ws.settings === 'object') {
-        const s = ws.settings;
+    const base: Workspace = {
+        ...ws,
+        home: typeof ws.home === 'boolean' ? ws.home : false,
+    };
+    if (base.settings && typeof base.settings === 'object') {
+        const s = base.settings;
         return {
-            ...ws,
+            ...base,
             settings: {
                 activeThemeId: s.activeThemeId ?? 'advanced',
                 colorScheme: s.colorScheme ?? 'dark',
@@ -16,13 +40,13 @@ function backfillSettings(ws: Workspace): Workspace {
             },
         };
     }
-    return { ...ws, settings: defaultWorkspaceSettings() };
+    return { ...base, settings: defaultWorkspaceSettings() };
 }
 
 class WorkspaceState {
     workspaces = $state<string[]>([]);
     current = $state<Workspace | null>(null);
-    currentName = $state('default');
+    currentName = $state(readPersistedCurrent());
     loading = $state(false);
     error = $state<string | null>(null);
 
@@ -41,12 +65,13 @@ class WorkspaceState {
         try {
             const ws = await api.workspaces.get(name);
             const filled = backfillSettings(ws);
-            if (!ws.settings) {
-                // Persist the backfill so we don't rehydrate defaults every load
+            const needsWrite = !ws.settings || typeof ws.home !== 'boolean';
+            if (needsWrite) {
                 await api.workspaces.update(name, filled);
             }
             this.current = filled;
             this.currentName = name;
+            persistCurrent(name);
         } catch (e) {
             this.error = e instanceof Error ? e.message : String(e);
         } finally {
@@ -92,6 +117,76 @@ class WorkspaceState {
         await this.loadWorkspace(name);
         await triggerDispatcher.init(name);
         eventBus.emit('workspace:switched', { name });
+    }
+
+    /** Set `name` as the home workspace. Clears the flag on every other
+     *  workspace to enforce the single-home invariant. */
+    async setHome(name: string) {
+        this.error = null;
+        try {
+            const names = await api.workspaces.list().then((r) => r.workspaces);
+            for (const wsName of names) {
+                const ws = await api.workspaces.get(wsName).catch(() => null);
+                if (!ws) continue;
+                const shouldBeHome = wsName === name;
+                if (ws.home === shouldBeHome) continue;
+                await api.workspaces.update(wsName, {
+                    ...backfillSettings(ws),
+                    home: shouldBeHome,
+                });
+            }
+            if (this.current && this.currentName === name) {
+                this.current = { ...this.current, home: true };
+            } else if (this.current && this.current.home) {
+                this.current = { ...this.current, home: false };
+            }
+        } catch (e) {
+            this.error = e instanceof Error ? e.message : String(e);
+        }
+    }
+
+    /** Load the persisted current workspace. Falls back to home, then to the
+     *  first available workspace if the persisted target is missing. */
+    async loadPreferred(): Promise<void> {
+        const tryLoad = async (name: string): Promise<boolean> => {
+            try {
+                await this.loadWorkspace(name);
+                return this.error === null;
+            } catch {
+                return false;
+            }
+        };
+        if (await tryLoad(this.currentName)) return;
+        this.error = null;
+        const home = await this.getHomeName();
+        if (home !== this.currentName && (await tryLoad(home))) return;
+        this.error = null;
+        const names = await this.listAvailable();
+        for (const n of names) {
+            if (await tryLoad(n)) return;
+        }
+    }
+
+    async listAvailable(): Promise<string[]> {
+        try {
+            const res = await api.workspaces.list();
+            return res.workspaces;
+        } catch {
+            return [];
+        }
+    }
+
+    async getHomeName(): Promise<string> {
+        try {
+            const names = await api.workspaces.list().then((r) => r.workspaces);
+            for (const wsName of names) {
+                const ws = await api.workspaces.get(wsName).catch(() => null);
+                if (ws?.home) return wsName;
+            }
+            return names[0] ?? 'default';
+        } catch {
+            return 'default';
+        }
     }
 }
 

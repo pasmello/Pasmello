@@ -32,6 +32,7 @@ export const api = {
             }
             const ws: Workspace = {
                 name,
+                home: false,
                 tools: [],
                 layout: { columns: 12, items: [] },
                 settings: defaultWorkspaceSettings(),

@@ -15,12 +15,40 @@ const BUILTIN_THEME_IDS = ['advanced', 'monolithic', 'cute'];
 export async function bootstrapApp(): Promise<void> {
     await storage.init();
     await migrateLegacyThemeSettings();
+    await ensureSingleHome();
     const newlyInstalled = await installBuiltinsIfMissing(BUILTIN_TOOL_IDS);
     if (newlyInstalled.length > 0) {
         await seedDefaultWorkspaceWithBuiltins(newlyInstalled);
     }
     await installBuiltinThemesIfMissing(BUILTIN_THEME_IDS);
     await themeRegistry.loadFromStorage();
+}
+
+/** Guarantee exactly one workspace has home=true. Existing workspaces written
+ *  before the home flag existed will have `undefined` — treat them as non-home
+ *  and elect `default` (or the first workspace if default is missing). */
+async function ensureSingleHome(): Promise<void> {
+    const names = await storage.listWorkspaces();
+    if (names.length === 0) return;
+    const loaded = await Promise.all(
+        names.map(async (name) => ({ name, ws: await storage.getWorkspace(name).catch(() => null) })),
+    );
+    const present = loaded.filter((x): x is { name: string; ws: NonNullable<typeof x['ws']> } => x.ws !== null);
+    const homes = present.filter((x) => x.ws.home === true);
+    if (homes.length === 1) return;
+
+    let electedName: string;
+    if (homes.length === 0) {
+        electedName = present.find((x) => x.name === 'default')?.name ?? present[0].name;
+    } else {
+        electedName = homes[0].name;
+    }
+
+    for (const { name, ws } of present) {
+        const shouldBeHome = name === electedName;
+        if (ws.home === shouldBeHome) continue;
+        await storage.saveWorkspace({ ...ws, home: shouldBeHome });
+    }
 }
 
 async function migrateLegacyThemeSettings(): Promise<void> {

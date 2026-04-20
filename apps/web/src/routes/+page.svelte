@@ -1,5 +1,9 @@
 <script lang="ts">
-    import WorkspaceView from '$lib/components/views/WorkspaceView.svelte';
-</script>
+    import { onMount } from 'svelte';
+    import { goto } from '$app/navigation';
+    import { base } from '$app/paths';
 
-<WorkspaceView />
+    onMount(() => {
+        goto(`${base}/home`, { replaceState: true });
+    });
+</script>

@@ -4,7 +4,8 @@ import { base } from '$app/paths';
 import { pluginSettings } from '$lib/state/plugin-settings.svelte';
 
 const ROUTES = {
-    workspace: '/',
+    home: '/home',
+    workspaces: '/workspaces',
     tools: '/tools',
     themes: '/themes',
     workflows: '/workflows',

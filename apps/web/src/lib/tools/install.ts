@@ -175,13 +175,36 @@ export async function installThemeFromUrl(url: string, options: ThemeInstallOpti
     return installThemeFromZip(buffer, options);
 }
 
+/** Peek at the bundled zip's manifest without committing to OPFS. Used to
+ *  decide whether the shipped builtin version is newer than what's installed. */
+async function peekBundledThemeVersion(url: string): Promise<string | null> {
+    try {
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const buffer = await res.arrayBuffer();
+        const zip = await JSZip.loadAsync(buffer);
+        const root = stripCommonPrefix(zip, 'theme.manifest.json');
+        const entry = root.file('theme.manifest.json');
+        if (!entry) return null;
+        const manifest = JSON.parse(await entry.async('string')) as ThemeManifest;
+        return manifest.version ?? null;
+    } catch {
+        return null;
+    }
+}
+
 export async function installBuiltinThemesIfMissing(builtinIds: string[]): Promise<string[]> {
     const installed: string[] = [];
     for (const id of builtinIds) {
+        const url = `${base}/builtin-themes/${id}.zip`;
         const existing = await storage.getThemeManifest(id).catch(() => null);
-        if (existing) continue;
+        if (existing) {
+            // Re-install if the bundled builtin ships a different version.
+            const bundled = await peekBundledThemeVersion(url);
+            if (!bundled || bundled === existing.version) continue;
+        }
         try {
-            await installThemeFromUrl(`${base}/builtin-themes/${id}.zip`);
+            await installThemeFromUrl(url);
             installed.push(id);
         } catch (err) {
             console.warn(`[Pasmello] failed to install builtin theme "${id}"`, err);
