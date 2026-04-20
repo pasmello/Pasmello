@@ -2,9 +2,11 @@
     import { onMount } from 'svelte';
     import { base } from '$app/paths';
     import ToolFrame from '$lib/components/tools/ToolFrame.svelte';
+    import WorkspaceThemeLayer from '$lib/components/iframes/WorkspaceThemeLayer.svelte';
     import { workspaceState } from '$lib/state/workspace.svelte';
     import { toolsState } from '$lib/state/tools.svelte';
     import { bridgeManager } from '$lib/sandbox/bridge.svelte';
+    import { themeRegistry } from '$lib/theme/registry.svelte';
     import type { LayoutItem } from '@pasmello/shared';
 
     let gridItems = $state<Array<{ id: string; toolId: string; x: number; y: number; w: number; h: number }>>([]);
@@ -30,8 +32,27 @@
         }));
     }
 
-    let hasTools = $derived(gridItems.length > 0);
+    // Apply any layout overrides the active workspace-layer theme has sent.
+    let placedItems = $derived.by(() => {
+        const overrides = bridgeManager.layoutOverrides;
+        return gridItems.map((g) => {
+            const o = overrides[g.toolId];
+            if (!o) return g;
+            return { ...g, x: o.x, y: o.y, w: o.w, h: o.h };
+        });
+    });
+
+    let hasTools = $derived(placedItems.length > 0);
     let cols = $derived(workspaceState.current?.layout.columns ?? 12);
+
+    let active = $derived(themeRegistry.active);
+    let workspaceLayer = $derived(active?.kind === 'iframe' ? active.manifest.layers?.workspace : undefined);
+
+    // Emit layout changes to the workspace layer so it can re-render tile decorations.
+    $effect(() => {
+        const tools = placedItems.map((p) => ({ toolId: p.toolId, x: p.x, y: p.y, w: p.w, h: p.h }));
+        bridgeManager.broadcastLayoutChanged(tools);
+    });
 </script>
 
 <div class="workspace">
@@ -49,22 +70,31 @@
             <button onclick={() => workspaceState.loadWorkspace(workspaceState.currentName)}>Retry</button>
         </div>
     {:else if hasTools && bridgeManager.bridge}
-        <div
-            class="tool-grid"
-            style="grid-template-columns: repeat({cols}, 1fr)"
-        >
-            {#each gridItems as item (item.id)}
-                <div
-                    class="grid-cell"
-                    style="grid-column: {item.x + 1} / span {item.w}; grid-row: {item.y + 1} / span {item.h}"
-                >
-                    <ToolFrame
-                        id={item.id}
-                        toolId={item.toolId}
-                        bridge={bridgeManager.bridge}
-                    />
-                </div>
-            {/each}
+        <div class="workspace-surface">
+            {#if workspaceLayer && bridgeManager.themeBridge && active}
+                <WorkspaceThemeLayer
+                    themeId={active.manifest.id}
+                    workspace={workspaceLayer}
+                    bridge={bridgeManager.themeBridge}
+                />
+            {/if}
+            <div
+                class="tool-grid"
+                style="grid-template-columns: repeat({cols}, 1fr)"
+            >
+                {#each placedItems as item (item.id)}
+                    <div
+                        class="grid-cell"
+                        style="grid-column: {item.x + 1} / span {item.w}; grid-row: {item.y + 1} / span {item.h}"
+                    >
+                        <ToolFrame
+                            id={item.id}
+                            toolId={item.toolId}
+                            bridge={bridgeManager.bridge}
+                        />
+                    </div>
+                {/each}
+            </div>
         </div>
     {:else}
         <div class="empty-state">
@@ -88,11 +118,18 @@
         font-weight: 600;
     }
 
+    .workspace-surface {
+        position: relative;
+        height: calc(100vh - 140px);
+    }
+
     .tool-grid {
+        position: relative;
+        z-index: 1;
         display: grid;
         gap: 16px;
         grid-auto-rows: 80px;
-        height: calc(100vh - 140px);
+        height: 100%;
     }
 
     .grid-cell {

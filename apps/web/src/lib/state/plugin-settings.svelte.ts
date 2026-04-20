@@ -57,6 +57,7 @@ class PluginSettingsState {
             ...s,
             themes: { ...s.themes, [themeId]: { ...(s.themes[themeId] ?? {}), [key]: value } },
         }));
+        bridgeManager.broadcastThemeSettingsChange(themeId, key, value);
     }
 
     getToolSetting(toolId: string, key: string): unknown {

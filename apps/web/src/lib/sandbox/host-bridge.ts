@@ -28,7 +28,12 @@ export class HostBridge {
         this.handlers.set(type, handler);
     }
 
-    mount(id: string, toolId: string, iframe: HTMLIFrameElement): MountedTool {
+    mount(
+        id: string,
+        toolId: string,
+        iframe: HTMLIFrameElement,
+        options: { layer?: string } = {},
+    ): MountedTool {
         const channel = new MessageChannel();
         const hostPort = channel.port1;
 
@@ -47,8 +52,13 @@ export class HostBridge {
         this.tools.set(id, mounted);
 
         const dispatch = () => {
+            const initMessage: Record<string, unknown> = {
+                type: 'init',
+                port: channel.port2,
+            };
+            if (options.layer) initMessage.layer = options.layer;
             iframe.contentWindow?.postMessage(
-                { type: 'init', port: channel.port2 },
+                initMessage,
                 '*',
                 [channel.port2],
             );
@@ -91,6 +101,11 @@ export class HostBridge {
             if (tool.toolId === toolId) return tool;
         }
         return undefined;
+    }
+
+    /** Iterate every currently mounted iframe. */
+    listMounts(): MountedTool[] {
+        return [...this.tools.values()];
     }
 
     /** Invoke a declared action on a mounted tool and await its response. */

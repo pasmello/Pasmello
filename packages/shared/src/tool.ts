@@ -1,4 +1,5 @@
 import type { PluginSettingDef } from './theme.js';
+import type { PluginPermissions } from './plugin.js';
 
 export interface ToolManifest {
     id: string;
@@ -14,14 +15,8 @@ export interface ToolManifest {
     settings?: PluginSettingDef[];
 }
 
-export interface ToolPermissions {
-    network: string[];
-    storage: 'none' | 'read' | 'read-write';
-    clipboard: 'none' | 'read' | 'read-write';
-    notifications: boolean;
-    camera: boolean;
-    geolocation: boolean;
-}
+/** Back-compat alias. ToolPermissions and PluginPermissions are the same shape. */
+export type ToolPermissions = PluginPermissions;
 
 export interface ToolAction {
     description: string;

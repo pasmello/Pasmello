@@ -11,6 +11,8 @@
     import { applyThemeTokens } from '$lib/theme/apply-tokens';
     import { bootstrapApp } from '$lib/bootstrap';
     import { triggerDispatcher } from '$lib/workflow/triggers';
+    import AmbientLayer from '$lib/components/iframes/AmbientLayer.svelte';
+    import ChromeLayer from '$lib/components/iframes/ChromeLayer.svelte';
 
     let { children } = $props();
 
@@ -24,9 +26,6 @@
         return 'workspace' as const;
     });
 
-    // Defer shell swap while on settings page.
-    // Tokens (colors/fonts) update immediately, but the shell layout
-    // only changes when navigating away from settings.
     let renderedThemeId = $state(pluginSettings.activeThemeId);
 
     $effect(() => {
@@ -35,7 +34,6 @@
         }
     });
 
-    // When navigating away from settings, pick up any pending theme switch
     let prevView = $state(currentView);
     $effect(() => {
         if (prevView === 'settings' && currentView !== 'settings') {
@@ -44,12 +42,10 @@
         prevView = currentView;
     });
 
-    let ThemeShell = $derived(
-        themeRegistry.all.find(t => t.manifest.id === renderedThemeId)?.component
-        ?? themeRegistry.activeComponent
-    );
+    let activeTheme = $derived(themeRegistry.all.find(t => t.manifest.id === renderedThemeId) ?? themeRegistry.active);
+    let ThemeShell = $derived(activeTheme?.kind === 'svelte' ? activeTheme.component : null);
+    let iframeLayers = $derived(activeTheme?.kind === 'iframe' ? activeTheme.manifest.layers : null);
 
-    // Transition overlay when shell actually swaps
     let transitioning = $state(false);
     let prevRendered = $state(renderedThemeId);
     $effect(() => {
@@ -70,13 +66,10 @@
         bootstrapped = true;
     });
 
-    // Keep the data-theme attribute in sync with the workspace's colorScheme.
     $effect(() => {
         document.documentElement.setAttribute('data-theme', pluginSettings.colorScheme);
     });
 
-    // Apply CSS tokens immediately when theme or color scheme changes
-    // (this is what gives instant color preview on settings page)
     $effect(() => {
         const manifest = themeRegistry.activeManifest;
         const scheme = pluginSettings.colorScheme;
@@ -85,11 +78,26 @@
         }
     });
 
-    // Broadcast theme to tool iframes
     $effect(() => {
         pluginSettings.colorScheme;
         bridgeManager.broadcastTheme();
     });
+
+    // Push nav state to chrome layer whenever it changes
+    $effect(() => {
+        bridgeManager.broadcastNav(currentView, workspaceState.currentName);
+    });
+
+    // Push route change to ambient layer
+    $effect(() => {
+        bridgeManager.broadcastRoute(currentView);
+    });
+
+    // Compute content offset for iframe chrome region
+    let chromeRegion = $derived(iframeLayers?.chrome.region);
+    let chromeSize = $derived(bridgeManager.chromeSizeOverride ?? iframeLayers?.chrome.size ?? 0);
+    let contentMarginLeft = $derived(chromeRegion === 'left' ? `${chromeSize}px` : '0');
+    let contentMarginTop = $derived(chromeRegion === 'top' ? `${chromeSize}px` : '0');
 </script>
 
 <svelte:head>
@@ -101,11 +109,29 @@
 {/if}
 
 {#if bootstrapped}
-    {#key renderedThemeId}
-        <ThemeShell {currentView}>
+    {#if iframeLayers && bridgeManager.themeBridge}
+        {#if iframeLayers.ambient}
+            <AmbientLayer
+                themeId={renderedThemeId}
+                ambient={iframeLayers.ambient}
+                bridge={bridgeManager.themeBridge}
+            />
+        {/if}
+        <ChromeLayer
+            themeId={renderedThemeId}
+            chrome={iframeLayers.chrome}
+            bridge={bridgeManager.themeBridge}
+        />
+        <main class="iframe-theme-content" style:margin-left={contentMarginLeft} style:margin-top={contentMarginTop}>
             {@render children()}
-        </ThemeShell>
-    {/key}
+        </main>
+    {:else if ThemeShell}
+        {#key renderedThemeId}
+            <ThemeShell {currentView}>
+                {@render children()}
+            </ThemeShell>
+        {/key}
+    {/if}
 {:else}
     <div class="boot-loading">Loading…</div>
 {/if}
@@ -134,5 +160,15 @@
         font-size: var(--pm-font-size-sm);
         color: var(--pm-text-tertiary);
         background-color: var(--pm-bg-primary);
+    }
+
+    .iframe-theme-content {
+        display: block;
+        min-height: 100vh;
+        padding: var(--pm-space-lg);
+        background-color: var(--pm-bg-primary);
+        color: var(--pm-text-primary);
+        box-sizing: border-box;
+        overflow-y: auto;
     }
 </style>

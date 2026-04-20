@@ -1,6 +1,7 @@
 import type {
     Workspace,
     ToolManifest,
+    ThemeManifest,
     Workflow,
     WorkflowRunResult,
 } from '@pasmello/shared';
@@ -22,6 +23,12 @@ export interface Storage {
     installTool(id: string, files: ToolFile[]): Promise<void>;
     removeTool(id: string): Promise<void>;
     readToolFile(id: string, path: string): Promise<Uint8Array | null>;
+
+    listThemes(): Promise<ThemeManifest[]>;
+    getThemeManifest(id: string): Promise<ThemeManifest | null>;
+    installTheme(id: string, files: ToolFile[]): Promise<void>;
+    removeTheme(id: string): Promise<void>;
+    readThemeFile(id: string, path: string): Promise<Uint8Array | null>;
 
     listToolDataKeys(workspace: string, toolId: string): Promise<string[]>;
     getToolData(workspace: string, toolId: string, key: string): Promise<string | null>;

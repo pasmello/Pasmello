@@ -17,4 +17,14 @@ export type {
     EventFilter,
 } from './workflow.js';
 export type { ApiResponse, ApiError } from './api.js';
-export type { ThemeManifest, ThemeSettingDef, PluginSettingDef } from './theme.js';
+export type {
+    ThemeManifest,
+    ThemeSettingDef,
+    PluginSettingDef,
+    ThemeLayers,
+    ThemeChromeLayer,
+    ThemeAmbientLayer,
+    ThemeWorkspaceLayer,
+    ThemeChromeRegion,
+} from './theme.js';
+export type { PluginKind, PluginPermissions } from './plugin.js';

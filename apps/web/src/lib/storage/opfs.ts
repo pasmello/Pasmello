@@ -1,6 +1,7 @@
 import type {
     Workspace,
     ToolManifest,
+    ThemeManifest,
     Workflow,
     WorkflowRunResult,
 } from '@pasmello/shared';
@@ -122,6 +123,58 @@ export class OpfsStorage implements Storage {
         for (const seg of segments) assertPathSegment(seg);
         const bytes = await this.readBytes(['tools', id, ...segments]);
         return bytes;
+    }
+
+    async listThemes(): Promise<ThemeManifest[]> {
+        const dir = await this.getDir(['themes'], false);
+        if (!dir) return [];
+        const out: ThemeManifest[] = [];
+        for await (const [name, handle] of entries(dir)) {
+            if (handle.kind !== 'directory') continue;
+            const m = await this.getThemeManifest(name).catch(() => null);
+            if (m) out.push(m);
+        }
+        return out;
+    }
+
+    async getThemeManifest(id: string): Promise<ThemeManifest | null> {
+        assertPathSegment(id);
+        return this.readJson<ThemeManifest>(['themes', id, 'theme.manifest.json']);
+    }
+
+    async installTheme(id: string, files: ToolFile[]): Promise<void> {
+        assertPathSegment(id);
+        const themesDir = await this.requireDir(['themes']);
+        await themesDir.removeEntry(id, { recursive: true }).catch(() => {});
+        const themeDir = await themesDir.getDirectoryHandle(id, { create: true });
+
+        for (const file of files) {
+            const segments = file.path.split('/').filter(Boolean);
+            for (const seg of segments) assertPathSegment(seg);
+            const fileName = segments.pop()!;
+            let cur = themeDir;
+            for (const seg of segments) {
+                cur = await cur.getDirectoryHandle(seg, { create: true });
+            }
+            const fh = await cur.getFileHandle(fileName, { create: true });
+            const writable = await fh.createWritable();
+            await writable.write(new Blob([file.data as Uint8Array<ArrayBuffer>]));
+            await writable.close();
+        }
+    }
+
+    async removeTheme(id: string): Promise<void> {
+        assertPathSegment(id);
+        const themesDir = await this.getDir(['themes'], false);
+        if (!themesDir) return;
+        await themesDir.removeEntry(id, { recursive: true }).catch(() => {});
+    }
+
+    async readThemeFile(id: string, path: string): Promise<Uint8Array | null> {
+        assertPathSegment(id);
+        const segments = path.split('/').filter(Boolean);
+        for (const seg of segments) assertPathSegment(seg);
+        return this.readBytes(['themes', id, ...segments]);
     }
 
     async listToolDataKeys(workspace: string, toolId: string): Promise<string[]> {

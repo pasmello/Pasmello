@@ -5,18 +5,28 @@ import { pluginSettings } from '$lib/state/plugin-settings.svelte';
 type AnyComponent = any;
 
 export type ThemeSource = 'builtin' | 'installed';
+export type ThemeKind = 'svelte' | 'iframe';
 
 export interface ThemeDefinition {
     manifest: ThemeManifest;
-    component: AnyComponent;
     source: ThemeSource;
+    /** 'svelte' during Phase 2 rollout (builtins), 'iframe' for OPFS-hosted themes. */
+    kind: ThemeKind;
+    /** Populated when kind === 'svelte'. */
+    component?: AnyComponent;
 }
 
 class ThemeRegistry {
-    private themes = new Map<string, ThemeDefinition>();
+    private themes = $state(new Map<string, ThemeDefinition>());
 
     register(def: ThemeDefinition): void {
         this.themes.set(def.manifest.id, def);
+        this.themes = new Map(this.themes);
+    }
+
+    unregister(id: string): void {
+        this.themes.delete(id);
+        this.themes = new Map(this.themes);
     }
 
     get all(): ThemeDefinition[] {
@@ -28,7 +38,11 @@ class ThemeRegistry {
     }
 
     get activeComponent(): AnyComponent {
-        return this.active?.component ?? this.themes.values().next().value?.component;
+        if (this.active?.kind === 'svelte') return this.active.component;
+        for (const def of this.themes.values()) {
+            if (def.kind === 'svelte') return def.component;
+        }
+        return undefined;
     }
 
     get activeManifest(): ThemeManifest | undefined {

@@ -64,6 +64,19 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/theme-sdk:
+    dependencies:
+      '@pasmello/sdk':
+        specifier: workspace:*
+        version: link:../sdk
+      '@pasmello/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
   tools/builtin/clock:
     dependencies:
       '@pasmello/sdk':

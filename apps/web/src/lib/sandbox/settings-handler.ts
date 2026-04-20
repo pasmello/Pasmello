@@ -1,40 +1,62 @@
 import type { RequestHandler } from './host-bridge.js';
+import type { PluginSettingDef } from '@pasmello/shared';
 import { storage } from '$lib/storage';
 import { pluginSettings } from '$lib/state/plugin-settings.svelte';
+import { themeRegistry } from '$lib/theme/registry.svelte';
 
-/**
- * Settings handlers expose per-tool, per-workspace settings to tools.
- * Keys are validated against the tool's declared `ToolManifest.settings`;
- * anything undeclared is silently ignored on `set` and returns `undefined`
- * on `get`.
- */
-export function createSettingsHandlers(): Record<string, RequestHandler> {
+interface SettingsAccessor {
+    getDefs(pluginId: string): Promise<PluginSettingDef[]>;
+    getValue(pluginId: string, key: string): unknown;
+    setValue(pluginId: string, key: string, value: unknown): void;
+}
+
+const toolAccessor: SettingsAccessor = {
+    async getDefs(pluginId) {
+        const manifest = await storage.getToolManifest(pluginId);
+        return manifest?.settings ?? [];
+    },
+    getValue: (pluginId, key) => pluginSettings.getToolSetting(pluginId, key),
+    setValue: (pluginId, key, value) => pluginSettings.setToolSetting(pluginId, key, value),
+};
+
+const themeAccessor: SettingsAccessor = {
+    async getDefs(pluginId) {
+        return themeRegistry.get(pluginId)?.manifest.settings ?? [];
+    },
+    getValue: (pluginId, key) => pluginSettings.getThemeSetting(pluginId, key),
+    setValue: (pluginId, key, value) => pluginSettings.setThemeSetting(pluginId, key, value),
+};
+
+export function createSettingsHandlers(
+    kind: 'tool' | 'theme' = 'tool',
+): Record<string, RequestHandler> {
+    const accessor = kind === 'theme' ? themeAccessor : toolAccessor;
+
     return {
-        'settings:get': async (toolId, data) => {
+        'settings:get': async (pluginId, data) => {
             const { key } = (data ?? {}) as { key?: string };
-            const manifest = await storage.getToolManifest(toolId);
-            const defs = manifest?.settings ?? [];
+            const defs = await accessor.getDefs(pluginId);
             if (key === undefined) {
                 const out: Record<string, unknown> = {};
                 for (const def of defs) {
-                    const stored = pluginSettings.getToolSetting(toolId, def.key);
+                    const stored = accessor.getValue(pluginId, def.key);
                     out[def.key] = stored ?? def.default;
                 }
                 return out;
             }
             const def = defs.find((d) => d.key === key);
             if (!def) return undefined;
-            const stored = pluginSettings.getToolSetting(toolId, key);
+            const stored = accessor.getValue(pluginId, key);
             return stored ?? def.default;
         },
 
-        'settings:set': async (toolId, data) => {
+        'settings:set': async (pluginId, data) => {
             const { key, value } = (data ?? {}) as { key?: string; value?: unknown };
             if (typeof key !== 'string') return false;
-            const manifest = await storage.getToolManifest(toolId);
-            const def = manifest?.settings?.find((d) => d.key === key);
+            const defs = await accessor.getDefs(pluginId);
+            const def = defs.find((d) => d.key === key);
             if (!def) return false;
-            pluginSettings.setToolSetting(toolId, key, value);
+            accessor.setValue(pluginId, key, value);
             return true;
         },
     };
