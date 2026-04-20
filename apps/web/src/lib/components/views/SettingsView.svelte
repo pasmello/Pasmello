@@ -7,6 +7,7 @@
     import { toolsState } from '$lib/state/tools.svelte';
     import { bridgeManager } from '$lib/sandbox/bridge.svelte';
     import { downloadStorageZip, importStorageZip } from '$lib/storage/portable';
+    import { getAllPluginUsage, formatBytes, type PluginUsage } from '$lib/storage/quota';
     import PluginSettingsRenderer from './PluginSettingsRenderer.svelte';
 
     let newWorkspaceName = $state('');
@@ -14,11 +15,27 @@
     let backupBusy = $state(false);
     let backupMessage = $state<string | null>(null);
     let importInput: HTMLInputElement;
+    let usage = $state<PluginUsage[]>([]);
+    let usageBusy = $state(false);
 
     onMount(async () => {
         await workspaceState.loadWorkspaces();
         await toolsState.loadTools();
+        await refreshUsage();
     });
+
+    async function refreshUsage() {
+        usageBusy = true;
+        try {
+            const plugins = [
+                ...toolsState.installed.map((t) => ({ kind: 'tool' as const, id: t.id })),
+                ...themeRegistry.all.map((d) => ({ kind: 'theme' as const, id: d.manifest.id })),
+            ];
+            usage = await getAllPluginUsage(plugins);
+        } finally {
+            usageBusy = false;
+        }
+    }
 
     async function handleCreate() {
         if (!newWorkspaceName.trim()) return;
@@ -158,6 +175,40 @@
             {/if}
         </section>
 
+        <!-- Storage usage -->
+        <section class="setting-group">
+            <h3>Storage usage</h3>
+            <p class="backup-hint">
+                Per-plugin OPFS usage. Soft caps are advisory in this release — hitting the cap shows a warning, nothing breaks.
+            </p>
+            <button class="setting-control" disabled={usageBusy} onclick={refreshUsage}>
+                {usageBusy ? 'Scanning…' : 'Refresh'}
+            </button>
+            {#if usage.length > 0}
+                <div class="usage-list">
+                    {#each usage as row (row.kind + ':' + row.id)}
+                        <div class="usage-row">
+                            <div class="usage-info">
+                                <span class="usage-label">
+                                    <span class="usage-kind" data-kind={row.kind}>{row.kind}</span>
+                                    {row.id}
+                                </span>
+                                <span class="usage-bytes">{formatBytes(row.bytes)} / {formatBytes(row.cap)}</span>
+                            </div>
+                            <div class="usage-bar">
+                                <div
+                                    class="usage-bar-fill"
+                                    class:warn={row.ratio >= 0.8 && row.ratio < 1}
+                                    class:over={row.ratio >= 1}
+                                    style="width: {Math.min(100, row.ratio * 100)}%"
+                                ></div>
+                            </div>
+                        </div>
+                    {/each}
+                </div>
+            {/if}
+        </section>
+
         <!-- Backup -->
         <section class="setting-group">
             <h3>Backup</h3>
@@ -215,6 +266,72 @@
         margin-top: var(--pm-space-xs);
         font-size: var(--pm-font-size-xs);
         color: var(--pm-text-tertiary);
+    }
+
+    .usage-list {
+        margin-top: var(--pm-space-sm);
+        display: flex;
+        flex-direction: column;
+        gap: var(--pm-space-sm);
+    }
+
+    .usage-row {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .usage-info {
+        display: flex;
+        justify-content: space-between;
+        gap: var(--pm-space-sm);
+        font-size: var(--pm-font-size-sm);
+    }
+
+    .usage-label {
+        display: flex;
+        align-items: center;
+        gap: var(--pm-space-xs);
+    }
+
+    .usage-kind {
+        font-size: var(--pm-font-size-xs);
+        padding: 2px 6px;
+        border-radius: var(--pm-radius-full);
+        background-color: var(--pm-bg-tertiary);
+        color: var(--pm-text-tertiary);
+    }
+
+    .usage-kind[data-kind='theme'] {
+        background-color: var(--pm-accent-subtle);
+        color: var(--pm-accent);
+    }
+
+    .usage-bytes {
+        color: var(--pm-text-tertiary);
+        font-family: var(--pm-font-mono);
+        font-size: var(--pm-font-size-xs);
+    }
+
+    .usage-bar {
+        height: 6px;
+        background-color: var(--pm-bg-tertiary);
+        border-radius: var(--pm-radius-full);
+        overflow: hidden;
+    }
+
+    .usage-bar-fill {
+        height: 100%;
+        background-color: var(--pm-accent);
+        transition: width var(--pm-transition-fast);
+    }
+
+    .usage-bar-fill.warn {
+        background-color: var(--pm-status-warning, orange);
+    }
+
+    .usage-bar-fill.over {
+        background-color: var(--pm-status-error, red);
     }
 
     .tool-settings-list {
