@@ -1,22 +1,24 @@
 <script lang="ts">
-    import type { ToolManifest, ToolPermissions } from '@pasmello/shared';
+    import type { ToolManifest, ThemeManifest, PluginPermissions, PluginKind } from '@pasmello/shared';
 
     interface Props {
-        manifest: ToolManifest;
+        manifest: ToolManifest | ThemeManifest;
+        kind: PluginKind;
         onresolve: (accepted: boolean) => void;
     }
 
-    let { manifest, onresolve }: Props = $props();
+    let { manifest, kind, onresolve }: Props = $props();
 
     type Line = { label: string; detail?: string };
 
-    function summarize(p: ToolPermissions): Line[] {
+    function summarize(p: PluginPermissions | undefined): Line[] {
         const lines: Line[] = [];
+        if (!p) {
+            lines.push({ label: 'No additional permissions declared' });
+            return lines;
+        }
         if (p.network && p.network.length > 0) {
-            lines.push({
-                label: 'Network access',
-                detail: p.network.join(', '),
-            });
+            lines.push({ label: 'Network access', detail: p.network.join(', ') });
         } else {
             lines.push({ label: 'No network access' });
         }
@@ -24,7 +26,7 @@
             label: 'Storage',
             detail: p.storage === 'none'
                 ? 'none'
-                : `${p.storage} (scoped to this workspace + tool)`,
+                : `${p.storage} (scoped to this workspace + ${kind})`,
         });
         if (p.clipboard !== 'none') lines.push({ label: 'Clipboard', detail: p.clipboard });
         if (p.notifications) lines.push({ label: 'Desktop notifications' });
@@ -33,7 +35,21 @@
         return lines;
     }
 
+    function layerSummary(m: ThemeManifest): string[] {
+        const layers = m.layers;
+        if (!layers) return [];
+        const parts: string[] = [];
+        parts.push(`chrome (${layers.chrome.region}${layers.chrome.size ? `, ${layers.chrome.size}px` : ''})`);
+        if (layers.ambient) parts.push('ambient background');
+        if (layers.workspace) parts.push('workspace tile layer');
+        return parts;
+    }
+
+    const isTheme = $derived(kind === 'theme');
     const lines = $derived(summarize(manifest.permissions));
+    const themeLayers = $derived(isTheme ? layerSummary(manifest as ThemeManifest) : []);
+    const heading = $derived(isTheme ? `Install theme "${manifest.name}"?` : `Install "${manifest.name}"?`);
+    const requestsLabel = $derived(isTheme ? 'This theme requests:' : 'This tool requests:');
 
     function cancel() { onresolve(false); }
     function accept() { onresolve(true); }
@@ -50,7 +66,7 @@
         aria-labelledby="pm-consent-title"
         onclick={(e) => e.stopPropagation()}
     >
-        <h3 id="pm-consent-title">Install &ldquo;{manifest.name}&rdquo;?</h3>
+        <h3 id="pm-consent-title">{heading}</h3>
         <p class="sub">
             <span class="id">{manifest.id}</span>
             <span class="sep">·</span>
@@ -60,8 +76,19 @@
             <p class="desc">{manifest.description}</p>
         {/if}
 
+        {#if themeLayers.length > 0}
+            <div class="perms">
+                <h4>This theme adds:</h4>
+                <ul>
+                    {#each themeLayers as layer (layer)}
+                        <li><span class="perm-label">{layer}</span></li>
+                    {/each}
+                </ul>
+            </div>
+        {/if}
+
         <div class="perms">
-            <h4>This tool requests:</h4>
+            <h4>{requestsLabel}</h4>
             <ul>
                 {#each lines as line (line.label)}
                     <li>

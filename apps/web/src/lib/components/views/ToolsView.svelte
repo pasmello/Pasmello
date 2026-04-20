@@ -213,6 +213,7 @@
 {#if consentRequest}
     <PermissionsConsentModal
         manifest={consentRequest.manifest}
+        kind="tool"
         onresolve={resolveConsent}
     />
 {/if}

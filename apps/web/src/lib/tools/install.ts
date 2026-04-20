@@ -12,12 +12,17 @@ export class ToolInstallError extends Error {
 }
 
 export type ConsentProvider = (manifest: ToolManifest) => Promise<boolean>;
+export type ThemeConsentProvider = (manifest: ThemeManifest) => Promise<boolean>;
 
 export interface InstallOptions {
     /** If provided, called with the parsed manifest BEFORE any OPFS write.
      *  Return `false` (or throw) to abort. When omitted, installation proceeds
      *  without a prompt — used for builtin auto-install. */
     consentProvider?: ConsentProvider;
+}
+
+export interface ThemeInstallOptions {
+    consentProvider?: ThemeConsentProvider;
 }
 
 export class ToolInstallCancelled extends Error {
@@ -109,7 +114,7 @@ export async function installBuiltinsIfMissing(builtinIds: string[]): Promise<st
 /** Install a theme from a zip. Mirrors installFromZip for tools. */
 export async function installThemeFromZip(
     input: Blob | ArrayBuffer | Uint8Array,
-    options: InstallOptions = {},
+    options: ThemeInstallOptions = {},
 ): Promise<ThemeManifest> {
     const zip = await JSZip.loadAsync(input as never);
 
@@ -136,10 +141,8 @@ export async function installThemeFromZip(
     }
 
     if (options.consentProvider) {
-        // The consent provider for themes is separate (different manifest shape).
-        // Reuse only when the caller opts in via installThemeFromZip; the
-        // signature stays ToolManifest-based in InstallOptions, so a theme caller
-        // passes an adapter. For now, skip consent for themes — branch 3 adds it.
+        const approved = await options.consentProvider(manifest);
+        if (!approved) throw new ToolInstallCancelled();
     }
 
     const files: ToolFile[] = [];
@@ -165,7 +168,7 @@ export async function installThemeFromZip(
     return manifest;
 }
 
-export async function installThemeFromUrl(url: string, options: InstallOptions = {}): Promise<ThemeManifest> {
+export async function installThemeFromUrl(url: string, options: ThemeInstallOptions = {}): Promise<ThemeManifest> {
     const res = await fetch(url);
     if (!res.ok) throw new ToolInstallError(`download failed: HTTP ${res.status}`);
     const buffer = await res.arrayBuffer();
