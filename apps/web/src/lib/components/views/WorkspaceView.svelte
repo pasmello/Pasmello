@@ -2,12 +2,18 @@
     import { onMount } from 'svelte';
     import { base } from '$app/paths';
     import ToolFrame from '$lib/components/tools/ToolFrame.svelte';
+    import WidgetFrame from '$lib/components/tools/WidgetFrame.svelte';
     import WorkspaceThemeLayer from '$lib/components/iframes/WorkspaceThemeLayer.svelte';
     import { workspaceState } from '$lib/state/workspace.svelte';
     import { toolsState } from '$lib/state/tools.svelte';
     import { bridgeManager } from '$lib/sandbox/bridge.svelte';
     import { themeRegistry } from '$lib/theme/registry.svelte';
-    import type { LayoutItem } from '@pasmello/shared';
+    import type { LayoutItem, WidgetDef } from '@pasmello/shared';
+
+    const GAP = 16;
+    const ROW_HEIGHT = 80;
+
+    let gridEl: HTMLElement | undefined = $state();
 
     onMount(async () => {
         await Promise.all([
@@ -16,14 +22,19 @@
         ]);
     });
 
+    let widgetManifests = $derived.by(() => {
+        const map = new Map<string, WidgetDef>();
+        for (const t of toolsState.installed) {
+            if (t.widget) map.set(t.id, t.widget);
+        }
+        return map;
+    });
+
     let gridItems = $derived.by(() => {
         const ws = workspaceState.current;
         if (!ws) return [] as Array<{ id: string; toolId: string; x: number; y: number; w: number; h: number }>;
-        const widgetIds = new Set(
-            toolsState.installed.filter((t) => t.widget).map((t) => t.id),
-        );
         return ws.layout.items
-            .filter((item: LayoutItem) => widgetIds.has(item.toolId))
+            .filter((item: LayoutItem) => widgetManifests.has(item.toolId))
             .map((item: LayoutItem) => ({
                 id: item.toolId,
                 toolId: item.toolId,
@@ -50,11 +61,19 @@
     let active = $derived(themeRegistry.active);
     let workspaceLayer = $derived(active?.manifest.layers?.workspace);
 
-    // Emit layout changes to the workspace layer so it can re-render tile decorations.
     $effect(() => {
         const tools = placedItems.map((p) => ({ toolId: p.toolId, x: p.x, y: p.y, w: p.w, h: p.h }));
         bridgeManager.broadcastLayoutChanged(tools);
     });
+
+    async function commitLayout(toolId: string, next: { x: number; y: number; w: number; h: number }) {
+        const ws = workspaceState.current;
+        if (!ws) return;
+        const nextItems = ws.layout.items.map((it) =>
+            it.toolId === toolId ? { ...it, ...next } : it,
+        );
+        await workspaceState.updateWorkspace({ ...ws, layout: { ...ws.layout, items: nextItems } });
+    }
 </script>
 
 <div class="workspace">
@@ -82,26 +101,39 @@
             {/if}
             <div
                 class="tool-grid"
+                bind:this={gridEl}
                 style="grid-template-columns: repeat({cols}, 1fr)"
             >
                 {#each placedItems as item (item.id)}
+                    {@const widget = widgetManifests.get(item.toolId)!}
                     <div
                         class="grid-cell"
                         style="grid-column: {item.x + 1} / span {item.w}; grid-row: {item.y + 1} / span {item.h}"
                     >
-                        <ToolFrame
-                            id={item.id}
-                            toolId={item.toolId}
-                            bridge={bridgeManager.bridge}
-                        />
+                        <WidgetFrame
+                            item={{ x: item.x, y: item.y, w: item.w, h: item.h }}
+                            {cols}
+                            rowHeight={ROW_HEIGHT}
+                            gap={GAP}
+                            minSize={widget.minSize}
+                            maxSize={widget.maxSize}
+                            {gridEl}
+                            oncommit={(next) => commitLayout(item.toolId, next)}
+                        >
+                            <ToolFrame
+                                id={item.id}
+                                toolId={item.toolId}
+                                bridge={bridgeManager.bridge}
+                            />
+                        </WidgetFrame>
                     </div>
                 {/each}
             </div>
         </div>
     {:else}
         <div class="empty-state">
-            <p>No tools in this workspace yet.</p>
-            <p class="hint">Go to <a href="{base}/tools">Tools</a> to add your first tool.</p>
+            <p>No widgets in this workspace yet.</p>
+            <p class="hint">Go to <a href="{base}/workspaces/{workspaceState.currentName}">Configure</a> to enable widgets.</p>
         </div>
     {/if}
 </div>
@@ -135,10 +167,7 @@
     }
 
     .grid-cell {
-        border-radius: var(--pm-radius-md);
-        overflow: hidden;
-        border: 1px solid var(--pm-border-subtle);
-        background-color: var(--pm-bg-surface);
+        position: relative;
     }
 
     .loading-state,
